@@ -108,6 +108,12 @@ class Bot(models.Model):
         return self.name
 
 
+class RiskSettings(models.Model):
+    user = models.OneToOneField(User, on_delete=models.CASCADE, related_name="risk_settings")
+    take_profit = models.DecimalField(max_digits=5, decimal_places=2, null=True, blank=True)
+    stop_loss = models.DecimalField(max_digits=5, decimal_places=2, blank=True, null=True)
+
+
 class BotBalance(models.Model):
     bot = models.ForeignKey(Bot, on_delete=models.CASCADE, related_name="balances")
     user = models.ForeignKey(User, on_delete=models.CASCADE, related_name="bot_balances")
@@ -325,7 +331,8 @@ class Signal(models.Model):
     is_long = models.BooleanField(default=True)
     bot = models.ForeignKey(Bot, on_delete=models.CASCADE, related_name="bot_signals")
     is_open = models.BooleanField(default=True)
-    created_at = models.DateTimeField(auto_now_add=True)  # ADD THIS LINE
+    created_at = models.DateTimeField(auto_now_add=True)
+    closed_at = models.DateTimeField(blank=True, null=True)
 
     class Meta:
         db_table = "signal"

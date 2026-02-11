@@ -104,7 +104,7 @@ def calculate_signals():
                     signals.append(sr_signal)
                     logger.info(f"    ✅ SR: {sr_signal['direction']}")
                 else:
-                    logger.info(f"    ❌ SR: No signal")
+                    logger.info(f"SR: No signal")
                     continue
 
             if len(signals) != enabled_count:
@@ -137,7 +137,6 @@ def calculate_signals():
 def interval_to_sec(period: str) -> int:
     INTERVAL_SEC = {"1MIN": 60, "5MIN": 300, "15MIN": 900, "30MIN": 1800, "1HRS": 3600}
 
-    # Adding 20 seconds in order to remove slippage
     return INTERVAL_SEC[period] + 20
 
 
@@ -221,7 +220,6 @@ def calculate_bollinger_signal(asset, bot, calc) -> Optional[Dict]:
             )
             continue
 
-        # Calculate Bollinger Bands
         bb_data = calc.calculate_bollinger_bands(
             list(quotes), bb_indicator.period, bb_indicator.std_dev
         )
@@ -237,7 +235,6 @@ def calculate_bollinger_signal(asset, bot, calc) -> Optional[Dict]:
             f"      [{asset.symbol}] {interval} BB: price={current_price:.2f}, upper={upper_band:.2f}, lower={lower_band:.2f}"
         )
 
-        # Check for signals
         if current_price <= lower_band:
             signals_found.append(("BUY", "Price at lower band · Oversold"))
             logger.info(f"      [{asset.symbol}] {interval} BB signal: BUY (price <= lower band)")

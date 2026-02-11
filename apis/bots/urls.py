@@ -8,6 +8,7 @@ urlpatterns = [
     path("bot_metrics/", views.BotMetrics.as_view(), name="bot_metrics"),
     path("get_info/<int:bot_id>/", views.GetBotsDetail.as_view(), name="get_bots"),
     path("delete_bot/<int:bot_id>/", views.DeleteMyBot.as_view(), name="delete_bot"),
+    path("risk-settings/", views.RiskSettingsView.as_view(), name="risk-settings"),
     path("leave_bot/<int:id>/", views.LeaveBot.as_view(), name="leave_bot"),
     path("get_signals/<int:id>/", views.GetSignals.as_view(), name="get_signals"),
     path("ping/", views.GetPing.as_view(), name="ping"),

@@ -12,6 +12,7 @@ from .models import (
     SupportResistanceIndicator,
     Signal,
     BotBalance,
+    RiskSettings,
 )
 from assets.models import AssetCryptoCoin
 
@@ -220,3 +221,36 @@ class GetBotSubscribers(serializers.ModelSerializer):
     class Meta:
         model = BotBalance
         fields = ["initial_balance", "current_balance", "unrealised_pnl"]
+
+
+class RiskSerializer(serializers.ModelSerializer):
+    take_profit = serializers.DecimalField(
+        max_digits=5,
+        decimal_places=2,
+        min_value=0.01,
+        max_value=100,
+        required=False,
+        allow_null=True,
+    )
+    stop_loss = serializers.DecimalField(
+        max_digits=5,
+        decimal_places=2,
+        min_value=0.01,
+        max_value=100,
+        required=False,
+        allow_null=True,
+    )
+
+    class Meta:
+        model = RiskSettings
+        fields = ["take_profit", "stop_loss"]
+
+    def validate_take_profit(self, value):
+        if value <= 0:
+            raise serializers.ValidationError("Take profit must be greater than 0")
+        return value
+
+    def validate_stop_loss(self, value):
+        if value <= 0:
+            raise serializers.ValidationError("Stop loss must be greater than 0")
+        return value

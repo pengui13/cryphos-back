@@ -25,7 +25,6 @@ DEBUG = ENV("DEBUG")
 ALLOWED_HOSTS = ["cryphos.com", "127.0.0.1", "localhost", "51.68.190.16"]
 
 
-# Application definition
 SUPPORTED_TIMEFRAMES = {
     "1m": "1MIN",
     "5m": "5MIN",
@@ -57,7 +56,7 @@ INSTALLED_APPS = [
 ]
 
 SPECTACULAR_SETTINGS = {
-    "TITLE": "My API",
+    "TITLE": "Cryphos API",
     "VERSION": "1.0.0",
     "SERVE_INCLUDE_SCHEMA": False,
     "SECURITY": [{"BearerAuth": []}],

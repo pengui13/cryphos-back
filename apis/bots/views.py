@@ -6,7 +6,7 @@ from bots.models import Bot, BotBalance, MainBotSettings
 from django.db.models import F, Q
 from django.utils import timezone
 from assets.models import Quote, HistQuotes
-from rest_framework.generics import ListAPIView
+from rest_framework.generics import ListAPIView, RetrieveUpdateAPIView
 from bots.models import Signal
 from .serializers import SignalSerializer
 from decimal import Decimal
@@ -24,6 +24,7 @@ from .serializers import (
     MacdIndicatorSerializer,
     BollingerBandsIndicatorSerializer,
     AtrIndicatorSerializer,
+    RiskSerializer,
 )
 from django.shortcuts import get_object_or_404
 from django.db.models import Max, Min
@@ -37,6 +38,7 @@ from .models import (
     BollingerBandsValue,
     AtrValue,
     ObvValue,
+    RiskSettings,
 )
 
 serializer_classes = {
@@ -81,6 +83,15 @@ serializer_classes = {
     "rsi": RsiIndicatorSerializer,
     "sr": SupportResistanceIndicatorSerializer,
 }
+
+
+class RiskSettingsView(RetrieveUpdateAPIView):
+    permission_classes = [IsAuthenticated]
+    serializer_class = RiskSerializer
+
+    def get_object(self):
+        obj, created = RiskSettings.objects.get_or_create(user=self.request.user)
+        return obj
 
 
 class AddTelegram(APIView):
