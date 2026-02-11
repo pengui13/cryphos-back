@@ -293,4 +293,8 @@ CELERY_BEAT_SCHEDULE = {
         "task": "core.tasks.calculate_signals",
         "schedule": crontab(),
     },
+    "check_roi": {
+        "task": "core.tasks.check_roi",
+        "schedule": crontab(),
+    },
 }

@@ -9,7 +9,9 @@ from django.core.cache import cache
 from assets.models import AssetCryptoCoin, HistQuotes
 from bots.utils import IndicatorsCalc
 from core.fetching_service import FetchingService
+from bots.models import RiskSettings
 
+User = get_user_model()
 logger = logging.getLogger(__name__)
 CRYPHOS_URL = "https://cryphos.com"
 CRYPHOS_LABEL = "Cryphos"
@@ -42,6 +44,42 @@ def fetch_ohlcv_for_interval(interval: str):
                     "close_price": kline[4],
                     "volume": kline[5],
                 },
+            )
+
+
+from django.utils import timezone
+
+
+@shared_task()
+def check_roi():
+    risk_settings = (
+        RiskSettings.objects.filter(user__bots__signals__is_open=True)
+        .select_related("user")
+        .distinct()
+    )
+    for risk in risk_settings:
+        signals = Signal.objects.filter(bot__owner=risk.user, is_open=True).select_related("asset")
+        for signal in signals:
+            open_price = signal.open_price
+            current_price = signal.asset.hist_quotes.order_by("-time").first().close_price
+            if signal.is_long:
+                roi = (current_price - open_price) / open_price * 100
+            else:
+                roi = (open_price - current_price) / open_price * 100
+            if risk.take_profit and roi >= float(risk.take_profit):
+                close_reason = "take_profit"
+            elif risk.stop_loss and roi <= -float(risk.stop_loss):
+                close_reason = "stop_loss"
+            if roi <= -risk.stop_loss or roi >= risk.take_profit:
+                signal.is_open = False
+                signal.close_price = current_price
+                signal.closed_at = timezone.now()
+                signal.save()
+            send_close_signal_telegram(
+                user=risk.user,
+                signal=signal,
+                roi=roi,
+                close_reason=close_reason,
             )
 
 
@@ -132,6 +170,78 @@ def calculate_signals():
     logger.info(f"   Bots checked: {total_bots_checked}")
     logger.info(f"   Signals sent: {total_signals_sent}")
     logger.info("=" * 60)
+
+
+def send_close_signal_telegram(user, signal, roi: float, close_reason: str) -> bool:
+    """Send signal close notification via Telegram."""
+    if not getattr(user, "chat_id", None) or not getattr(user, "tg_approved", False):
+        return False
+
+    text = build_close_signal_message(signal, roi, close_reason)
+    url = f"https://api.telegram.org/bot{settings.TELEGRAM_BOT_TOKEN}/sendMessage"
+
+    try:
+        resp = requests.post(
+            url,
+            json={
+                "chat_id": user.chat_id,
+                "text": text,
+                "parse_mode": "HTML",
+                "disable_web_page_preview": True,
+            },
+            timeout=10,
+        )
+        if resp.ok:
+            logger.info(f"✅ Close signal sent → {user.username} ({signal.asset.symbol})")
+            return True
+        logger.error(f"❌ Telegram API error {resp.status_code}: {resp.text}")
+        return False
+    except requests.RequestException as e:
+        logger.error(f"❌ Telegram network error: {e}")
+        return False
+
+
+def build_close_signal_message(signal, roi: float, close_reason: str) -> str:
+    """Build formatted Telegram message for closed signal."""
+    is_profit = roi > 0
+    emoji = "✅" if is_profit else "❌"
+    reason_emoji = "🎯" if close_reason == "take_profit" else "🛑"
+    reason_text = "Take Profit" if close_reason == "take_profit" else "Stop Loss"
+
+    direction = "LONG" if signal.is_long else "SHORT"
+
+    # Price formatting
+    open_price = float(signal.open_price)
+    close_price = float(signal.close_price)
+
+    def format_price(price):
+        if price >= 1000:
+            return f"${price:,.0f}"
+        elif price >= 1:
+            return f"${price:,.2f}"
+        return f"${price:.4f}"
+
+    roi_str = f"+{roi:.2f}%" if roi > 0 else f"{roi:.2f}%"
+    roi_color = "🟢" if roi > 0 else "🔴"
+
+    bot_name = getattr(signal.bot, "name", None) or "Trading Bot"
+
+    msg = f"""
+{emoji} <b>SIGNAL CLOSED</b>
+
+<b>{signal.asset.symbol}/USDT</b> · {direction}
+{reason_emoji} {reason_text}
+
+<b>Entry:</b> {format_price(open_price)}
+<b>Exit:</b> {format_price(close_price)}
+{roi_color} <b>P&L: {roi_str}</b>
+
+<code>────────────────────</code>
+🤖 {bot_name}
+🔗 <a href="{CRYPHOS_URL}">{CRYPHOS_LABEL}</a>
+""".strip()
+
+    return msg
 
 
 def interval_to_sec(period: str) -> int:
