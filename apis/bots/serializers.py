@@ -246,11 +246,11 @@ class RiskSerializer(serializers.ModelSerializer):
         fields = ["take_profit", "stop_loss"]
 
     def validate_take_profit(self, value):
-        if value <= 0:
+        if value is not None and value <= 0:
             raise serializers.ValidationError("Take profit must be greater than 0")
         return value
 
     def validate_stop_loss(self, value):
-        if value <= 0:
+        if value is not None and value <= 0:
             raise serializers.ValidationError("Stop loss must be greater than 0")
         return value
