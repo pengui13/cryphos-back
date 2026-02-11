@@ -1,0 +1,21 @@
+{
+    "editor.formatOnSave": true,
+    "[python]": {
+        "editor.defaultFormatter": "ms-python.black-formatter",
+        "editor.formatOnSave": true
+    },
+    "black-formatter.path": [
+        "/Users/duck/Documents/GitHub/cryphos/cryphos-back/.venv/bin/black"
+    ],
+    "python.defaultInterpreterPath": "/Users/duck/Documents/GitHub/cryphos/cryphos-back/.venv/bin/python",
+    "python.analysis.extraPaths": [
+        "/Users/duck/Documents/GitHub/cryphos/cryphos-back",
+        "/Users/duck/Documents/GitHub/cryphos/cryphos-back"
+    ],
+    "python.analysis.diagnosticMode": "openFilesOnly",
+    "python.linting.enabled": true,
+    "python.linting.lintOnSave": true,
+    "python.linting.flake8Enabled": true,
+    "python.linting.pylintEnabled": false,
+    "python.linting.flake8Path": "/Users/duck/Documents/GitHub/cryphos/cryphos-back/.venv/bin/flake8"
+}

@@ -1,0 +1,117 @@
+services:
+  db:
+    image: postgres:16-alpine
+    container_name: cryphos-db
+    restart: always
+    environment:
+      POSTGRES_DB: cryphos
+      POSTGRES_USER: cryphos_user
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+    volumes:
+      - cryphos_pgdata:/var/lib/postgresql/data
+    ports:
+      - "127.0.0.1:5432:5432"
+    healthcheck:
+      test: [ "CMD-SHELL", "pg_isready -U cryphos_user -d cryphos" ]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+
+  redis:
+    image: redis:7-alpine
+    container_name: cryphos-redis
+    restart: always
+    ports:
+      - "127.0.0.1:6379:6379"
+    healthcheck:
+      test: [ "CMD", "redis-cli", "ping" ]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+
+  backend:
+    build:
+      context: .
+    volumes:
+      - ./staticfiles:/app/staticfiles
+    container_name: cryphos-backend
+    restart: always
+    env_file:
+      - .env
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    ports:
+      - "127.0.0.1:8000:8000"
+    working_dir: /app/apis
+    environment:
+      - PYTHONPATH=/app
+    command: >
+      sh -c "/app/.venv/bin/python manage.py migrate &&
+             exec /app/.venv/bin/daphne -b 0.0.0.0 -p 8000 apis.asgi:application"
+
+  celery:
+    build:
+      context: .
+    container_name: cryphos-celery
+    restart: always
+    env_file:
+      - .env
+    depends_on:
+      backend:
+        condition: service_started
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    working_dir: /app/apis
+    environment:
+      - PYTHONPATH=/app
+    command: >
+      sh -c "exec /app/.venv/bin/celery -A apis worker -l info --concurrency=2"
+
+  celery-beat:
+    build:
+      context: .
+    container_name: cryphos-celery-beat
+    restart: always
+    env_file:
+      - .env
+    depends_on:
+      backend:
+        condition: service_started
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    working_dir: /app/apis
+    environment:
+      - PYTHONPATH=/app
+    volumes:
+      - celerybeat_data:/data
+    command: >
+      sh -c "exec /app/.venv/bin/celery -A apis beat -l info --schedule=/data/celerybeat-schedule"
+
+  tg:
+    build:
+      context: .
+    container_name: tg
+    restart: always
+    env_file:
+      - .env
+    depends_on:
+      backend:
+        condition: service_started
+      db:
+        condition: service_healthy
+    working_dir: /app/apis
+    environment:
+      - PYTHONPATH=/app
+    command: [ "/app/.venv/bin/python", "manage.py", "tg" ]
+    stop_grace_period: 20s
+
+volumes:
+  cryphos_pgdata:
+  celerybeat_data:

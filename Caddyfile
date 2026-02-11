@@ -1,0 +1,28 @@
+cryphos.com {
+    
+    handle /static/* {
+        root * /var/www/cryphos-back
+        file_server
+    }
+
+    handle /api/* {
+        reverse_proxy 127.0.0.1:8000
+    }
+
+    handle {
+        reverse_proxy localhost:3000
+    }
+    
+    handle /admin/* {
+        reverse_proxy 127.0.0.1:8000
+    }
+
+    encode gzip
+
+    header {
+        X-Content-Type-Options nosniff
+        X-Frame-Options DENY
+        Referrer-Policy no-referrer-when-downgrade
+    }
+}
+
