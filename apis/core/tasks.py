@@ -52,31 +52,47 @@ from django.utils import timezone
 
 @shared_task()
 def check_roi():
-    risk_settings = (
-        RiskSettings.objects.filter(user__bots__signals__is_open=True)
-        .select_related("user")
-        .distinct()
-    )
-    for risk in risk_settings:
-        signals = Signal.objects.filter(bot__owner=risk.user, is_open=True).select_related("asset")
-        for signal in signals:
-            open_price = signal.open_price
-            current_price = signal.asset.hist_quotes.order_by("-time").first().close_price
-            if signal.is_long:
-                roi = (current_price - open_price) / open_price * 100
-            else:
-                roi = (open_price - current_price) / open_price * 100
-            if risk.take_profit and roi >= float(risk.take_profit):
-                close_reason = "take_profit"
-            elif risk.stop_loss and roi <= -float(risk.stop_loss):
-                close_reason = "stop_loss"
-            if roi <= -risk.stop_loss or roi >= risk.take_profit:
-                signal.is_open = False
-                signal.close_price = current_price
-                signal.closed_at = timezone.now()
-                signal.save()
+    open_signals = Signal.objects.filter(is_open=True).select_related("asset", "bot__owner")
+
+    for signal in open_signals:
+        try:
+            risk = RiskSettings.objects.get(user=signal.bot.owner)
+        except RiskSettings.DoesNotExist:
+            continue
+
+        if not risk.take_profit and not risk.stop_loss:
+            continue
+
+        latest_quote = signal.asset.hist_quotes.order_by("-time").first()
+        if not latest_quote:
+            continue
+
+        open_price = float(signal.open_price)
+        current_price = float(latest_quote.close_price)
+
+        if signal.is_long:
+            roi = (current_price - open_price) / open_price * 100
+        else:
+            roi = (open_price - current_price) / open_price * 100
+
+        should_close = False
+        close_reason = None
+
+        if risk.take_profit and roi >= float(risk.take_profit):
+            should_close = True
+            close_reason = "take_profit"
+        if risk.stop_loss and roi <= -float(risk.stop_loss):
+            should_close = True
+            close_reason = "stop_loss"
+
+        if should_close:
+            signal.is_open = False
+            signal.close_price = current_price
+            signal.closed_at = timezone.now()
+            signal.save()
+
             send_close_signal_telegram(
-                user=risk.user,
+                user=signal.bot.owner,
                 signal=signal,
                 roi=roi,
                 close_reason=close_reason,
