@@ -291,10 +291,10 @@ CELERY_BEAT_SCHEDULE = {
     },
     "calculate-signals": {
         "task": "core.tasks.calculate_signals",
-        "schedule": crontab(),
+        "schedule": timedelta(seconds=5),
     },
     "check_roi": {
         "task": "core.tasks.check_roi",
-        "schedule": crontab(),
+        "schedule": timedelta(seconds=5),
     },
 }

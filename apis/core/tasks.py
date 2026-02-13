@@ -10,6 +10,7 @@ from assets.models import AssetCryptoCoin, HistQuotes
 from bots.utils import IndicatorsCalc
 from core.fetching_service import FetchingService
 from bots.models import RiskSettings
+from django.utils import timezone
 import redis
 
 User = get_user_model()
@@ -48,9 +49,6 @@ def fetch_ohlcv_for_interval(interval: str):
                     "volume": kline[5],
                 },
             )
-
-
-from django.utils import timezone
 
 
 @shared_task()
