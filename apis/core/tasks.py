@@ -67,15 +67,17 @@ def parse_funding_rate():
     assets = AssetCryptoCoin.objects.all()
     for asset in assets:
         symbol = asset.symbol.upper()
-        URL = f"https://fapi.binance.com/fapi/v1/fundingRate?symbol={symbol}USDTlimit=1"
+        URL = f"https://fapi.binance.com/fapi/v1/fundingRate?symbol={symbol}USDT&limit=1"
         try:
             response = requests.get(URL)
-            result = response.json()
-            FundingRate.objects.create(
-                asset=symbol,
-                rate=Decimal(result["fundingRate"]),
-                funding_time=result["fundingTime"],
+            result = response.json()[0]
+            FundingRate.objects.update_or_create(
+                asset=asset,
                 exchange="binance",
+                defaults={
+                    "rate": Decimal(result["fundingRate"]),
+                    "funding_time": result["fundingTime"],
+                },
             )
         except Exception as e:
             print(e)
