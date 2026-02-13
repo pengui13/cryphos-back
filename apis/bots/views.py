@@ -28,7 +28,7 @@ from .serializers import (
 )
 from django.shortcuts import get_object_or_404
 from django.db.models import Max, Min
-
+import redis
 from .models import (
     BotSignal,
     RsiIndicator,
@@ -40,6 +40,8 @@ from .models import (
     ObvValue,
     RiskSettings,
 )
+
+REDIS_URL = "redis://redis:6379/1"
 
 serializer_classes = {
     "rsi": RsiIndicatorSerializer,
@@ -77,6 +79,17 @@ class GetPing(APIView):
 
     def get(self, request, *args, **kwargs):
         return Response({"ping": True})
+
+
+class GetFnGValue(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        r = redis.from_url(REDIS_URL, decode_responses=True)
+        value = r.get("fng") or None
+        classification = r.get("fng_class") or None
+
+        return Response({"value": value, "class": classification})
 
 
 serializer_classes = {

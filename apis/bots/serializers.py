@@ -13,6 +13,7 @@ from .models import (
     Signal,
     BotBalance,
     RiskSettings,
+    FnGValue,
 )
 from assets.models import AssetCryptoCoin
 

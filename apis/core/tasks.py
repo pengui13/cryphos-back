@@ -1,6 +1,6 @@
 import logging
 from typing import Dict, List, Optional
-from bots.models import Signal
+from bots.models import Signal, FnGValue
 import requests
 from celery import shared_task
 from django.conf import settings
@@ -51,13 +51,21 @@ def fetch_ohlcv_for_interval(interval: str):
             )
 
 
+{
+    "value": "9",
+    "value_classification": "Extreme Fear",
+    "timestamp": "1770940800",
+    "time_until_update": "8474",
+}
+
+
 @shared_task()
 def parse_fng():
     URL = "https://api.alternative.me/fng/"
     response = requests.get(URL)
     result = response.json()["data"][0]
-    print("=" * 50)
-    print(result)
+    r.set("fng", int(result["value"]))
+    r.set("fng_class", result["value_classification"])
 
 
 @shared_task()

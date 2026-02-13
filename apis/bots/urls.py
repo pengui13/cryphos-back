@@ -4,6 +4,7 @@ from . import views
 
 urlpatterns = [
     path("create_bot/", views.CreateBot.as_view(), name="create_bot"),
+    path("fng/", views.GetFnGValue.as_view(), name="fng"),
     path("create_balance/", views.CreateBotBalance.as_view(), name="create_balance"),
     path("bot_metrics/", views.BotMetrics.as_view(), name="bot_metrics"),
     path("get_info/<int:bot_id>/", views.GetBotsDetail.as_view(), name="get_bots"),
