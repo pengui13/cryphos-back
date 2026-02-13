@@ -277,11 +277,16 @@ def calculate_rsi_signal(asset, bot, calc) -> Optional[Dict]:
     for interval in rsi_indicator.intervals:
         value = cache.get(f"rsi:{asset.symbol}:{period}:{interval}")
         if not value:
-            q = HistQuotes.objects.filter(symbol=asset, interval=interval).order_by("-time").first()
-            if not q:
+            prices = list(
+                HistQuotes.objects.filter(symbol=asset, interval=interval)
+                .order_by("-time")[: period * 4]
+                .values_list("close_price", flat=True)
+            )
+            if not prices:
                 continue
-
-            value = calc.calculate_rsi_for_quote(q, rsi_indicator.period)
+            symbol = f"{asset.symbol.upper()}USDT"
+            prices[0] = r.hget("prices:last", symbol)
+            value = calc.calculate_rsi(prices, rsi_indicator.period)
             if value is None:
                 continue
             cache.set(

@@ -6,6 +6,9 @@ import logging
 from typing import List, Optional, Dict
 from assets.models import HistQuotes
 import redis
+from decimal import Decimal
+import pandas_ta as ta
+import pandas as pd
 
 logger = logging.getLogger(__name__)
 
@@ -14,51 +17,14 @@ r = redis.from_url("redis://redis:6379/1", decode_responses=True)
 
 class IndicatorsCalc:
 
-    def calculate_rsi_for_quote(self, quote, period: int = 14) -> Optional[float]:
-
-        quotes = (
-            HistQuotes.objects.filter(symbol=quote.symbol, interval=quote.interval)
-            .filter(time__lte=quote.time)
-            .order_by("-time")[: period * 4]
-            .values_list("close_price", flat=True)
-        )
-        symbol = f"{quote.symbol.upper()}USDT"
-        current_price = r.hget("prices:last", symbol)
-        if current_price:
-            quotes.insert(0, float(current_price))
-        if len(quotes) < period + 1:
-            logger.warning(f"Not enough data for RSI: need {period + 1}, got {len(quotes)}")
+    def calculate_rsi(self, prices: list[Decimal], period: int = 14) -> Optional[float]:
+        if len(prices) < period + 1:
             return None
 
-        quotes = list(reversed(quotes))
+        df = pd.DataFrame({"close": [float(p) for p in reversed(prices)]})
+        rsi = ta.rsi(df["close"], length=period).iloc[-1]
 
-        changes = []
-        for i in range(1, len(quotes)):
-            current = float(quotes[i])
-            previous = float(quotes[i - 1])
-            change = current - previous
-            changes.append(change)
-
-        if len(changes) < period:
-            return None
-
-        gains = [max(change, 0) for change in changes]
-        losses = [abs(min(change, 0)) for change in changes]
-
-        avg_gain = sum(gains[:period]) / period
-        avg_loss = sum(losses[:period]) / period
-
-        for i in range(period, len(gains)):
-            avg_gain = (avg_gain * (period - 1) + gains[i]) / period
-            avg_loss = (avg_loss * (period - 1) + losses[i]) / period
-
-        if avg_loss == 0:
-            return 100.0
-
-        rs = avg_gain / avg_loss
-        rsi = 100 - (100 / (1 + rs))
-
-        return round(rsi, 2)
+        return round(rsi, 2) if pd.notna(rsi) else None
 
     def calculate_bollinger_bands(
         self, quotes: List, period: int = 20, std_dev: float = 2.0
