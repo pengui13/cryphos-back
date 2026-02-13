@@ -21,6 +21,8 @@ ALLOWED_TFS = {"1MIN", "5MIN", "15MIN", "30MIN", "1HRS", "1DAY"}
 
 
 class FundingRateSerializer(serializers.ModelSerializer):
+    asset = serializers.SerializerMethodField()
+
     def get_asset(self, obj):
         return obj.asset.symbol
 
