@@ -297,4 +297,9 @@ CELERY_BEAT_SCHEDULE = {
         "task": "core.tasks.check_roi",
         "schedule": timedelta(seconds=5),
     },
+    "parse_fng": {
+        "task": "core.tasks.parse_fng",
+        # "schedule": crontab(hour=0, minute=0),
+        "schedule": timedelta(seconds=5),
+    },
 }

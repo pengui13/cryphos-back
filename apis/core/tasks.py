@@ -52,6 +52,15 @@ def fetch_ohlcv_for_interval(interval: str):
 
 
 @shared_task()
+def parse_fng():
+    URL = "https://api.alternative.me/fng/"
+    response = requests.get(URL)
+    result = response.json()["data"][0]
+    print("=" * 50)
+    print(result)
+
+
+@shared_task()
 def check_roi():
     open_signals = Signal.objects.filter(is_open=True).select_related("asset", "bot__owner")
 
