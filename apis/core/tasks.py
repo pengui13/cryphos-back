@@ -285,7 +285,8 @@ def calculate_rsi_signal(asset, bot, calc) -> Optional[Dict]:
             if not prices:
                 continue
             symbol = f"{asset.symbol.upper()}USDT"
-            prices[0] = r.hget("prices:last", symbol)
+            current_price = float(r.hget("prices:last", symbol))
+            prices[0] = current_price
             value = calc.calculate_rsi(prices, rsi_indicator.period)
             if value is None:
                 continue
@@ -308,9 +309,6 @@ def calculate_rsi_signal(asset, bot, calc) -> Optional[Dict]:
         )
         return None
 
-    latest_hist = HistQuotes.objects.filter(symbol=asset).order_by("-time").first()
-    price = float(latest_hist.close_price) if latest_hist and latest_hist.close_price else 0.0
-
     avg_rsi = sum(rsi_values) / len(rsi_values)
     tf_display = (
         ", ".join(rsi_indicator.intervals)
@@ -323,7 +321,7 @@ def calculate_rsi_signal(asset, bot, calc) -> Optional[Dict]:
         "indicator": "RSI",
         "symbol": asset.symbol,
         "direction": direction,
-        "current_price": price,
+        "current_price": current_price,
         "value": avg_rsi,
         "intervals": tf_display,
         "reason": (
@@ -342,24 +340,20 @@ def calculate_bollinger_signal(asset, bot, calc) -> Optional[Dict]:
     signals_found = []
 
     for interval in bb_indicator.intervals:
-        quotes = HistQuotes.objects.filter(symbol=asset, interval=interval).order_by("-time")[
-            : bb_indicator.period + 1
-        ]
-
-        if len(quotes) < bb_indicator.period:
-            logger.info(
-                f"      [{asset.symbol}] Not enough quotes for BB on {interval} (need {bb_indicator.period}, got {len(quotes)})"
-            )
-            continue
-
-        bb_data = calc.calculate_bollinger_bands(
-            list(quotes), bb_indicator.period, bb_indicator.std_dev
+        prices = list(
+            HistQuotes.objects.filter(symbol=asset, interval=interval)
+            .order_by("-time")[: bb_indicator.period * 4]
+            .values_list("close_price", flat=True)
         )
+
+        symbol = f"{asset.symbol.upper()}USDT"
+        current_price = float(r.hget("prices:last", symbol))
+        prices[0] = current_price
+        bb_data = calc.calculate_bollinger_bands(prices, bb_indicator.period, bb_indicator.std_dev)
 
         if not bb_data:
             continue
 
-        current_price = float(quotes[0].close_price)
         upper_band = bb_data["upper"]
         lower_band = bb_data["lower"]
 
@@ -384,9 +378,6 @@ def calculate_bollinger_signal(asset, bot, calc) -> Optional[Dict]:
 
     direction = directions[0]
 
-    latest_hist = HistQuotes.objects.filter(symbol=asset).order_by("-time").first()
-    price = float(latest_hist.close_price) if latest_hist and latest_hist.close_price else 0.0
-
     tf_display = (
         ", ".join(bb_indicator.intervals)
         .replace("MIN", "m")
@@ -398,7 +389,7 @@ def calculate_bollinger_signal(asset, bot, calc) -> Optional[Dict]:
         "indicator": "Bollinger Bands",
         "symbol": asset.symbol,
         "direction": direction,
-        "current_price": price,
+        "current_price": current_price,
         "value": None,
         "intervals": tf_display,
         "reason": signals_found[0][1],

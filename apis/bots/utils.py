@@ -27,41 +27,16 @@ class IndicatorsCalc:
         return round(rsi, 2) if pd.notna(rsi) else None
 
     def calculate_bollinger_bands(
-        self, quotes: List, period: int = 20, std_dev: float = 2.0
+        self, prices: list[Decimal], period: int = 20, std_dev: float = 2.0
     ) -> Optional[Dict[str, float]]:
-        """
-        Calculate Bollinger Bands.
 
-        Args:
-            quotes: List of HistQuotes objects (ordered by time DESC)
-            period: SMA period (default: 20)
-            std_dev: Standard deviation multiplier (default: 2.0)
-
-        Returns:
-            Dict with 'upper', 'middle', 'lower' bands or None
-        """
-        if len(quotes) < period:
-            return None
-
-        # Get closing prices
-        closes = [float(q.close_price) for q in quotes[:period]]
-
-        # Calculate SMA (middle band)
-        sma = sum(closes) / period
-
-        # Calculate standard deviation
-        variance = sum((x - sma) ** 2 for x in closes) / period
-        std = variance**0.5
-
-        # Calculate bands
-        upper_band = sma + (std_dev * std)
-        lower_band = sma - (std_dev * std)
+        df = pd.DataFrame({"close": [float(p) for p in reversed(prices)]})
+        bbands = ta.bbands(df["close"], length=period, std=std_dev)
 
         return {
-            "upper": round(upper_band, 2),
-            "middle": round(sma, 2),
-            "lower": round(lower_band, 2),
-            "std": round(std, 2),
+            "upper": bbands[f"BBU_{period}_{std_dev}"].iloc[-1],
+            "middle": bbands[f"BBM_{period}_{std_dev}"].iloc[-1],
+            "lower": bbands[f"BBL_{period}_{std_dev}"].iloc[-1],
         }
 
     def calculate_support_resistance(
