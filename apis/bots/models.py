@@ -367,7 +367,7 @@ class BollingerBandsIndicator(BaseIndicator):
 
 class FundingRate(models.Model):
     asset = models.ForeignKey(AssetCryptoCoin, on_delete=models.CASCADE)
-    rate = models.DecimalField(max_length=10, decimal_places=8)
+    rate = models.DecimalField(max_digits=18, decimal_places=8)
     funding_time = models.BigIntegerField()
     exchange = models.CharField(max_length=100)
 
