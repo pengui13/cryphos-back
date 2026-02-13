@@ -1,17 +1,19 @@
 import logging
 from typing import Dict, List, Optional
-from bots.models import Signal, FnGValue
 import requests
+
+from bots.models import Signal, FundingRate, RiskSettings
+from assets.models import AssetCryptoCoin, HistQuotes
+
 from celery import shared_task
 from django.conf import settings
 from django.contrib.auth import get_user_model
 from django.core.cache import cache
-from assets.models import AssetCryptoCoin, HistQuotes
 from bots.utils import IndicatorsCalc
 from core.fetching_service import FetchingService
-from bots.models import RiskSettings
 from django.utils import timezone
 import redis
+from decimal import Decimal
 
 User = get_user_model()
 logger = logging.getLogger(__name__)
@@ -58,6 +60,25 @@ def parse_fng():
     result = response.json()["data"][0]
     r.set("fng", int(result["value"]))
     r.set("fng_class", result["value_classification"])
+
+
+@shared_task
+def parse_funding_rate():
+    assets = AssetCryptoCoin.objects.all()
+    for asset in assets:
+        symbol = asset.symbol.upper()
+        URL = f"https://fapi.binance.com/fapi/v1/fundingRate?symbol={symbol}USDTlimit=1"
+        try:
+            response = requests.get(URL)
+            result = response.json()
+            FundingRate.objects.create(
+                asset=symbol,
+                rate=Decimal(result["fundingRate"]),
+                funding_time=result["fundingTime"],
+                exchange="binance",
+            )
+        except Exception as e:
+            print(e)
 
 
 @shared_task()

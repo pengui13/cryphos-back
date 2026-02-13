@@ -301,4 +301,9 @@ CELERY_BEAT_SCHEDULE = {
         "task": "core.tasks.parse_fng",
         "schedule": crontab(hour=0, minute=0),
     },
+    "parse_funding_rate": {
+        "task": "core.tasks.parse_funding_rate",
+        "schedule": timedelta(seconds=5),
+        # "schedule": crontab(hour="0,8,16", minute=5),
+    },
 }

@@ -365,6 +365,13 @@ class BollingerBandsIndicator(BaseIndicator):
         verbose_name_plural = "Bollinger Bands Indicators"
 
 
+class FundingRate(models.Model):
+    asset = models.ForeignKey(AssetCryptoCoin, on_delete=models.CASCADE)
+    rate = models.DecimalField(max_length=10, decimal_places=8)
+    funding_time = models.BigIntegerField()
+    exchange = models.CharField(max_length=100)
+
+
 class AtrIndicator(BaseIndicator):
     bot = models.ForeignKey(Bot, related_name="atr_indicators", on_delete=models.CASCADE)
     period = models.IntegerField(default=14)
