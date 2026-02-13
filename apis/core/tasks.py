@@ -10,11 +10,14 @@ from assets.models import AssetCryptoCoin, HistQuotes
 from bots.utils import IndicatorsCalc
 from core.fetching_service import FetchingService
 from bots.models import RiskSettings
+import redis
 
 User = get_user_model()
 logger = logging.getLogger(__name__)
 CRYPHOS_URL = "https://cryphos.com"
 CRYPHOS_LABEL = "Cryphos"
+
+r = redis.from_url("redis://redis:6379/1", decode_responses=True)
 
 
 @shared_task
@@ -68,7 +71,8 @@ def check_roi():
             continue
 
         open_price = float(signal.open_price)
-        current_price = float(latest_quote.close_price)
+        symbol = f"{signal.asset.symbol.upper()}USDT"
+        current_price = r.hget("prices:last", symbol)
 
         if signal.is_long:
             roi = (current_price - open_price) / open_price * 100
