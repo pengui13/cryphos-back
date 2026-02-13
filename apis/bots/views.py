@@ -25,6 +25,7 @@ from .serializers import (
     BollingerBandsIndicatorSerializer,
     AtrIndicatorSerializer,
     RiskSerializer,
+    FundingRateSerializer,
 )
 from django.shortcuts import get_object_or_404
 from django.db.models import Max, Min
@@ -39,6 +40,7 @@ from .models import (
     AtrValue,
     ObvValue,
     RiskSettings,
+    FundingRate,
 )
 
 REDIS_URL = "redis://redis:6379/1"
@@ -79,6 +81,12 @@ class GetPing(APIView):
 
     def get(self, request, *args, **kwargs):
         return Response({"ping": True})
+
+
+class GetFundingRates(ListAPIView):
+    permission_classes = [IsAuthenticated]
+    serializer_class = FundingRateSerializer
+    queryset = FundingRate.objects.all()
 
 
 class GetFnGValue(APIView):

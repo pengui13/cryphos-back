@@ -13,11 +13,20 @@ from .models import (
     Signal,
     BotBalance,
     RiskSettings,
-    FnGValue,
+    FundingRate,
 )
 from assets.models import AssetCryptoCoin
 
 ALLOWED_TFS = {"1MIN", "5MIN", "15MIN", "30MIN", "1HRS", "1DAY"}
+
+
+class FundingRateSerializer(serializers.ModelSerializer):
+    def get_asset(self, obj):
+        return obj.asset.symbol
+
+    class Meta:
+        model = FundingRate
+        fields = ["id", "asset", "rate", "funding_time", "exchange"]
 
 
 class BotSerializer(serializers.ModelSerializer):

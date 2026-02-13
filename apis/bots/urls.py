@@ -6,6 +6,7 @@ urlpatterns = [
     path("create_bot/", views.CreateBot.as_view(), name="create_bot"),
     path("fng/", views.GetFnGValue.as_view(), name="fng"),
     path("create_balance/", views.CreateBotBalance.as_view(), name="create_balance"),
+    path("funding/", views.GetFundingRates.as_view(), name="funding"),
     path("bot_metrics/", views.BotMetrics.as_view(), name="bot_metrics"),
     path("get_info/<int:bot_id>/", views.GetBotsDetail.as_view(), name="get_bots"),
     path("delete_bot/<int:bot_id>/", views.DeleteMyBot.as_view(), name="delete_bot"),
