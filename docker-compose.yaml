@@ -67,7 +67,7 @@ services:
       - PYTHONPATH=/app
       - REDIS_URL=redis://redis:6379/1
     command: >
-      sh -c "exec /app/.venv/bin/python manage.py collector"
+      sh -c "exec /app/.venv/bin/python collector.py"
   celery:
     build:
       context: .

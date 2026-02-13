@@ -226,7 +226,6 @@ def build_close_signal_message(signal, roi: float, close_reason: str) -> str:
 
     direction = "LONG" if signal.is_long else "SHORT"
 
-    # Price formatting
     open_price = float(signal.open_price)
     close_price = float(signal.close_price)
 
