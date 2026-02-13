@@ -51,14 +51,6 @@ def fetch_ohlcv_for_interval(interval: str):
             )
 
 
-{
-    "value": "9",
-    "value_classification": "Extreme Fear",
-    "timestamp": "1770940800",
-    "time_until_update": "8474",
-}
-
-
 @shared_task()
 def parse_fng():
     URL = "https://api.alternative.me/fng/"
@@ -87,7 +79,7 @@ def check_roi():
 
         open_price = float(signal.open_price)
         symbol = f"{signal.asset.symbol.upper()}USDT"
-        current_price = r.hget("prices:last", symbol)
+        current_price = float(r.hget("prices:last", symbol))
 
         if signal.is_long:
             roi = (current_price - open_price) / open_price * 100
@@ -302,7 +294,9 @@ def calculate_rsi_signal(asset, bot, calc) -> Optional[Dict]:
             if not prices:
                 continue
             symbol = f"{asset.symbol.upper()}USDT"
-            current_price = float(r.hget("prices:last", symbol))
+            current_price = float(r.hget("prices:last", symbol)) or None
+            if not current_price:
+                continue
             prices[0] = current_price
             value = calc.calculate_rsi(prices, rsi_indicator.period)
             if value is None:
