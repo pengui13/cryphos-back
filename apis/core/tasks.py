@@ -303,12 +303,21 @@ def calculate_rsi_signal(asset, bot, calc) -> Optional[Dict]:
     rsi_indicator = bot.rsi_indicators.first()
     if not rsi_indicator:
         return None
+
     period = rsi_indicator.period
     rsi_values: List[float] = []
 
+    symbol = f"{asset.symbol.upper()}USDT"
+    last = r.hget("prices:last", symbol)
+    current_price = float(last) if last else None
+    if not current_price:
+        return None
+
     for interval in rsi_indicator.intervals:
-        value = cache.get(f"rsi:{asset.symbol}:{period}:{interval}")
-        if not value:
+        cache_key = f"rsi:{asset.symbol}:{period}:{interval}"
+        value = cache.get(cache_key)
+
+        if value is None:
             prices = list(
                 HistQuotes.objects.filter(symbol=asset, interval=interval)
                 .order_by("-time")[: period * 4]
@@ -316,18 +325,16 @@ def calculate_rsi_signal(asset, bot, calc) -> Optional[Dict]:
             )
             if not prices:
                 continue
-            symbol = f"{asset.symbol.upper()}USDT"
-            current_price = float(r.hget("prices:last", symbol)) or None
-            if not current_price:
-                continue
+
             prices[0] = current_price
-            value = calc.calculate_rsi(prices, rsi_indicator.period)
+            value = calc.calculate_rsi(prices, period)
             if value is None:
                 continue
-            cache.set(
-                f"rsi:{asset.symbol}:{period}:{interval}", value, timeout=interval_to_sec(interval)
-            )
-        rsi_values.append(value)
+
+            cache.set(cache_key, value, timeout=interval_to_sec(interval))
+
+        rsi_values.append(float(value))
+
     if not rsi_values:
         return None
 
