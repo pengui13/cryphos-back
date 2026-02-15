@@ -391,6 +391,7 @@ class ObvIndicator(BaseIndicator):
 
 class EmaIndicator(BaseIndicator):
     bot = models.ForeignKey(Bot, related_name="ema_indicators", on_delete=models.CASCADE)
+    period = models.IntegerField(default=14)
 
     class Meta:
         verbose_name = "EMA Indicator"
