@@ -39,6 +39,15 @@ class IndicatorsCalc:
             "lower": bbands[f"BBL_{period}_{std_dev}"].iloc[-1],
         }
 
+    def calculate_ema(self, prices: list[Decimal], period: int = 20) -> Optional[float]:
+        if len(prices) < period:
+            return None
+
+        df = pd.DataFrame({"close": [float(p) for p in reversed(prices)]})
+        ema = ta.ema(df["close"], length=period)
+
+        return float(ema.iloc[-1])
+
     def calculate_support_resistance(
         self, quotes: List, lookback: int = 50, num_levels: int = 6
     ) -> Optional[List[float]]:

@@ -164,8 +164,9 @@ def calculate_signals():
             has_rsi = bot.rsi_indicators.exists()
             has_bb = bot.bollinger_bands_indicators.exists()
             has_sr = bot.sr_indicators.exists()
+            has_ema = bot.ema_indicators.exists()
 
-            enabled_count = sum([has_rsi, has_bb, has_sr])
+            enabled_count = sum([has_rsi, has_bb, has_sr, has_ema])
 
             signals = []
 
@@ -195,6 +196,15 @@ def calculate_signals():
                     logger.info(f"SR: No signal")
                     continue
 
+            if has_ema:
+                ema_signal = calculate_ema_signal(asset, bot, calc)
+                if ema_signal:
+                    signals.append(ema_signal)
+                    logger.info(f"EMA: {ema_signal['direction']}")
+                else:
+                    logger.info(f"EMA: No signal")
+                    continue
+
             if len(signals) != enabled_count:
                 logger.info(f"    ⏭️  Only {len(signals)}/{enabled_count} indicators triggered")
                 continue
@@ -203,10 +213,10 @@ def calculate_signals():
             unique_directions = set(directions)
 
             if len(unique_directions) > 1:
-                logger.info(f"    ❌ Indicators disagree: {directions}")
+                logger.info(f" Indicators disagree: {directions}")
                 continue
 
-            logger.info(f"    🎯 ALL {enabled_count} INDICATORS AGREE ON {directions[0]}!")
+            logger.info(f" ALL {enabled_count} INDICATORS AGREE ON {directions[0]}!")
 
             if enabled_count == 1:
                 send_signal_to_owner(bot, signals[0])
@@ -372,6 +382,99 @@ def calculate_rsi_signal(asset, bot, calc) -> Optional[Dict]:
     }
 
 
+def calculate_ema_signal(asset, bot, calc) -> Optional[Dict]:
+
+    ema_indicator = bot.ema_indicators.first()
+    if not ema_indicator:
+        return None
+
+    period = ema_indicator.period
+    symbol = f"{asset.symbol.upper()}USDT"
+
+    last = r.hget("prices:last", symbol)
+    current_price = float(last) if last else None
+    if not current_price:
+        return None
+
+    signals_found: List[Dict] = []
+
+    for interval in ema_indicator.intervals:
+        prices = list(
+            HistQuotes.objects.filter(symbol=asset, interval=interval)
+            .order_by("-time")[: period * 4]
+            .values_list("close_price", flat=True)
+        )
+        if not prices or len(prices) < period + 2:
+            continue
+
+        prev_close = float(prices[0])
+
+        prices[0] = Decimal(str(current_price))
+
+        ema_curr = calc.calculate_ema(prices, period)
+        if ema_curr is None:
+            continue
+
+        prices_prev = prices.copy()
+        prices_prev[0] = Decimal(str(prev_close))
+        ema_prev = calc.calculate_ema(prices_prev, period)
+        if ema_prev is None:
+            continue
+
+        crossed_up = (prev_close <= ema_prev) and (current_price > ema_curr)
+        crossed_down = (prev_close >= ema_prev) and (current_price < ema_curr)
+
+        if crossed_up:
+            signals_found.append(
+                {
+                    "direction": "BUY",
+                    "interval": interval,
+                    "ema": float(ema_curr),
+                    "prev_close": prev_close,
+                }
+            )
+        elif crossed_down:
+            signals_found.append(
+                {
+                    "direction": "SELL",
+                    "interval": interval,
+                    "ema": float(ema_curr),
+                    "prev_close": prev_close,
+                }
+            )
+
+    if not signals_found:
+        return None
+
+    directions = [s["direction"] for s in signals_found]
+    if len(set(directions)) != 1:
+        logger.info(f"      [{asset.symbol}] EMA timeframes disagree: {directions}")
+        return None
+
+    direction = directions[0]
+    avg_ema = sum(s["ema"] for s in signals_found) / len(signals_found)
+
+    tf_display = (
+        ", ".join(ema_indicator.intervals)
+        .replace("MIN", "m")
+        .replace("HRS", "h")
+        .replace("DAY", "d")
+    )
+
+    reason = "Price crossed above EMA" if direction == "BUY" else "Price crossed below EMA"
+
+    return {
+        "indicator": "EMA",
+        "symbol": asset.symbol,
+        "direction": direction,
+        "current_price": current_price,
+        "value": avg_ema,
+        "intervals": tf_display,
+        "reason": reason,
+        "emoji": "📈" if direction == "BUY" else "📉",
+    }
+
+
 def calculate_bollinger_signal(asset, bot, calc) -> Optional[Dict]:
     """Calculate Bollinger Bands signal for a bot."""
     bb_indicator = bot.bollinger_bands_indicators.first()
@@ -457,7 +560,6 @@ def calculate_sr_signal(asset, bot, calc) -> Optional[Dict]:
             )
             continue
 
-        # Calculate support/resistance levels
         levels = calc.calculate_support_resistance(
             list(quotes), sr_indicator.lookback, sr_indicator.levels_count
         )
@@ -468,7 +570,6 @@ def calculate_sr_signal(asset, bot, calc) -> Optional[Dict]:
 
         current_price = float(quotes[0].close_price)
 
-        # Find closest support and resistance
         supports = [l for l in levels if l < current_price]
         resistances = [l for l in levels if l > current_price]
 

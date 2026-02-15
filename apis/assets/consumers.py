@@ -1,4 +1,3 @@
-import json
 import asyncio
 import redis.asyncio as redis
 from channels.generic.websocket import AsyncWebsocketConsumer
@@ -13,10 +12,8 @@ class LiquidationConsumer(AsyncWebsocketConsumer):
 
         self.redis = await redis.from_url(REDIS_URL)
 
-        # Отправляем последние ликвидации при подключении
         await self._send_recent_liquidations()
 
-        # Подписываемся на новые
         self.pubsub = self.redis.pubsub()
         await self.pubsub.subscribe("liquidations")
         self.listener_task = asyncio.create_task(self._listen_redis())
@@ -26,7 +23,6 @@ class LiquidationConsumer(AsyncWebsocketConsumer):
         try:
             recent = await self.redis.lrange("recent_liquidations", 0, 49)
 
-            # Отправляем в обратном порядке (старые первыми)
             for item in reversed(recent):
                 data = item.decode() if isinstance(item, bytes) else item
                 await self.send(text_data=data)

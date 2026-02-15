@@ -14,6 +14,7 @@ from .models import (
     BotBalance,
     RiskSettings,
     FundingRate,
+    EmaIndicator,
 )
 from assets.models import AssetCryptoCoin
 
@@ -43,6 +44,7 @@ class BotSerializer(serializers.ModelSerializer):
     rsi = serializers.SerializerMethodField()
     bb = serializers.SerializerMethodField()
     sr = serializers.SerializerMethodField()
+    ema = serializers.SerializerMethodField()
 
     def get_rsi(self, obj):
         ind = obj.rsi_indicators.first()
@@ -51,6 +53,10 @@ class BotSerializer(serializers.ModelSerializer):
     def get_bb(self, obj):
         ind = obj.bollinger_bands_indicators.first()
         return BollingerBandsIndicatorSerializer(ind).data if ind else None
+
+    def get_ema(self, obj):
+        ind = obj.ema_indicators.first()
+        return EmaIndicatorSerializer(ind).data if ind else None
 
     def get_sr(self, obj):
         ind = obj.sr_indicators.first()
@@ -183,6 +189,12 @@ class BotBalanceSerializer(serializers.ModelSerializer):
         validated_data["current_balance"] = validated_data["initial_balance"]
         validated_data["user"] = self.context["request"].user
         return super().create(validated_data)
+
+
+class EmaIndicatorSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = EmaIndicator
+        fields = ["intervals", "periods"]
 
 
 class MaIndicatorSerializer(serializers.ModelSerializer):

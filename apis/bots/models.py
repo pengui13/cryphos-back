@@ -389,6 +389,14 @@ class ObvIndicator(BaseIndicator):
         verbose_name_plural = "OBV Indicators"
 
 
+class EmaIndicator(BaseIndicator):
+    bot = models.ForeignKey(Bot, related_name="ema_indicators", on_delete=models.CASCADE)
+
+    class Meta:
+        verbose_name = "EMA Indicator"
+        verbose_name_plural = "EMA Indicators"
+
+
 class BaseIndicatorValue(models.Model):
     quote = models.OneToOneField("assets.HistQuotes", on_delete=models.CASCADE)
 
