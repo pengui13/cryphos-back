@@ -26,6 +26,7 @@ from .serializers import (
     AtrIndicatorSerializer,
     RiskSerializer,
     FundingRateSerializer,
+    EmaIndicatorSerializer,
 )
 from django.shortcuts import get_object_or_404
 from django.db.models import Max, Min
@@ -138,6 +139,7 @@ serializer_classes = {
     "rsi": RsiIndicatorSerializer,
     "bb": BollingerBandsIndicatorSerializer,
     "sr": SupportResistanceIndicatorSerializer,
+    "ema": EmaIndicatorSerializer,
 }
 
 
