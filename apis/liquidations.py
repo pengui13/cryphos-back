@@ -4,12 +4,12 @@ import redis.asyncio as redis
 from datetime import datetime
 import json
 
-BYBIT_URL = "wss://stream.bybit.com/v5/public/linear"
+OKX_URL = "wss://ws.okx.com:8443/ws/v5/public"
 REDIS_URL = "redis://redis:6379/1"
 
 BUCKET_SIZES = {
-    "BTCUSDT": 100,
-    "ETHUSDT": 10,
+    "BTC-USDT-SWAP": 100,
+    "ETH-USDT-SWAP": 10,
     "default": 0.01,
 }
 
@@ -17,39 +17,6 @@ TTL_SECONDS = 86400
 
 
 class LiquidationFetcher:
-    SYMBOLS = [
-        "BTCUSDT",
-        "ETHUSDT",
-        "XRPUSDT",
-        "SOLUSDT",
-        "BNBUSDT",
-        "DOGEUSDT",
-        "ADAUSDT",
-        "SUIUSDT",
-        "TRXUSDT",
-        "LINKUSDT",
-        "PEPEUSDT",
-        "LTCUSDT",
-        "AVAXUSDT",
-        "TAOUSDT",
-        "HBARUSDT",
-        "BCHUSDT",
-        "NEARUSDT",
-        "AAVEUSDT",
-        "UNIUSDT",
-        "FILUSDT",
-        "XLMUSDT",
-        "WLDUSDT",
-        "TRUMPUSDT",
-        "ARBUSDT",
-        "WIFUSDT",
-        "DOTUSDT",
-        "POLUSDT",
-        "PENGUUSDT",
-        "BONKUSDT",
-        "SHIBUSDT",
-        "ICPUSDT",
-    ]
 
     def __init__(self):
         self.running = False
@@ -73,13 +40,13 @@ class LiquidationFetcher:
             await self.redis.close()
 
     async def _connect_and_listen(self):
-        async with websockets.connect(BYBIT_URL) as ws:
+        async with websockets.connect(OKX_URL) as ws:
             subscribe_msg = {
                 "op": "subscribe",
-                "args": [f"liquidation.{symbol}" for symbol in self.SYMBOLS],
+                "args": [{"channel": "liquidation-orders", "instType": "SWAP"}],
             }
             await ws.send(json.dumps(subscribe_msg))
-            print(f"Subscribed to {len(self.SYMBOLS)} symbols")
+            print("Subscribed to OKX liquidations")
 
             asyncio.create_task(self._ping_loop(ws))
 
@@ -89,23 +56,35 @@ class LiquidationFetcher:
     async def _ping_loop(self, ws):
         while self.running:
             try:
-                await ws.send(json.dumps({"op": "ping"}))
+                await ws.send("ping")
                 await asyncio.sleep(20)
             except:
                 break
 
     async def _handle_message(self, message: str):
-        data = json.loads(message)
-
-        if "topic" not in data or not data["topic"].startswith("liquidation"):
+        if message == "pong":
             return
 
-        liq_data = data.get("data", {})
+        try:
+            data = json.loads(message)
+        except:
+            return
 
-        symbol = liq_data.get("symbol", "")
-        price = float(liq_data.get("price", 0))
-        size = float(liq_data.get("size", 0))
+        if "data" not in data:
+            return
+
+        for liq_data in data.get("data", []):
+            await self._process_liquidation(liq_data)
+
+    async def _process_liquidation(self, liq_data: dict):
+
+        inst_id = liq_data.get("instId", "")
         side = liq_data.get("side", "").lower()
+        size = float(liq_data.get("sz", 0))
+        price = float(liq_data.get("bkPx", 0))
+
+        symbol = inst_id.replace("-SWAP", "").replace("-", "")
+
         usd_value = size * price
 
         liq_type = "short" if side == "buy" else "long"
@@ -117,11 +96,12 @@ class LiquidationFetcher:
             "qty": size,
             "usd": usd_value,
             "ts": datetime.utcnow().isoformat(),
+            "exchange": "okx",
         }
 
         await self.redis.publish("liquidations", json.dumps(liquidation))
 
-        bucket_size = BUCKET_SIZES.get(symbol, BUCKET_SIZES["default"])
+        bucket_size = BUCKET_SIZES.get(inst_id, BUCKET_SIZES["default"])
         bucket = int(price // bucket_size) * bucket_size
 
         heatmap_key = f"heatmap:{symbol}"
@@ -148,7 +128,7 @@ class LiquidationFetcher:
 
         await pipe.execute()
 
-        print(f"{symbol} {liq_type.upper()} ${usd_value:,.0f} @ {price:,.2f}")
+        print(f" {symbol} {liq_type.upper()} ${usd_value:,.0f} @ {price:,.2f}")
 
 
 async def main():
