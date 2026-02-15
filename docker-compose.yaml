@@ -52,6 +52,23 @@ services:
       sh -c "/app/.venv/bin/python manage.py migrate &&
              exec /app/.venv/bin/daphne -b 0.0.0.0 -p 8000 apis.asgi:application"
 
+  liquidations:
+    build:
+      context: .
+    container_name: cryphos-liquidations
+    restart: always
+    env_file:
+      - .env
+    depends_on:
+      redis:
+        condition: service_healthy
+    working_dir: /app/apis
+    environment:
+      - PYTHONPATH=/app
+      - REDIS_URL=redis://redis:6379/1
+    command: >
+      sh -c "exec /app/.venv/bin/python liquidations.py"
+
   collector:
     build:
       context: .
