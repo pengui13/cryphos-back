@@ -50,7 +50,9 @@ tzdata==2025.3
 tzlocal==5.3.1
 uritemplate==4.2.0
 urllib3==2.6.3
-channels-redis
 vine==5.1.0
 websockets
 wcwidth==0.6.0
+channels>=4.0,<5.0
+channels-redis>=4.0,<5.0
+daphne>=4.0,<5.0
