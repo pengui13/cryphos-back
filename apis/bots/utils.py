@@ -39,14 +39,85 @@ class IndicatorsCalc:
             "lower": bbands[f"BBL_{period}_{std_dev}"].iloc[-1],
         }
 
-    def calculate_ema(self, prices: list[Decimal], period: int = 20) -> Optional[float]:
-        if len(prices) < period:
+    def calculate_ema_signal(asset, bot, calc) -> Optional[Dict]:
+        ema_indicator = bot.ema_indicators.first()
+        if not ema_indicator:
             return None
 
-        df = pd.DataFrame({"close": [float(p) for p in reversed(prices)]})
-        ema = ta.ema(df["close"], length=period)
+        period = ema_indicator.period
+        symbol = f"{asset.symbol.upper()}USDT"
 
-        return float(ema.iloc[-1])
+        last = r.hget("prices:last", symbol)
+        current_price = float(last) if last else None
+        if not current_price:
+            return None
+
+        signals_found: List[Dict] = []
+
+        for interval in ema_indicator.intervals:
+            closes = list(
+                HistQuotes.objects.filter(symbol=asset, interval=interval)
+                .order_by("-time")
+                .values_list("close_price", flat=True)[: (period * 4)]
+            )
+            if not closes or len(closes) < period + 2:
+                continue
+
+            prev_close = float(closes[1])
+
+            prices_prev = [Decimal(str(x)) for x in closes[1:]]
+            ema_prev = calc.calculate_ema(prices_prev, period)
+            if ema_prev is None:
+                continue
+
+            prices_curr = [Decimal(str(x)) for x in closes]
+            prices_curr[0] = Decimal(str(current_price))
+            ema_curr = calc.calculate_ema(prices_curr, period)
+            if ema_curr is None:
+                continue
+
+            crossed_up = (prev_close <= ema_prev) and (current_price > ema_curr)
+            crossed_down = (prev_close >= ema_prev) and (current_price < ema_curr)
+
+            if crossed_up:
+                signals_found.append(
+                    {"direction": "BUY", "interval": interval, "ema": float(ema_curr)}
+                )
+            elif crossed_down:
+                signals_found.append(
+                    {"direction": "SELL", "interval": interval, "ema": float(ema_curr)}
+                )
+
+        if not signals_found:
+            return None
+
+        directions = [s["direction"] for s in signals_found]
+        if len(set(directions)) != 1:
+            logger.info(f"      [{asset.symbol}] EMA timeframes disagree: {directions}")
+            return None
+
+        direction = directions[0]
+        avg_ema = sum(s["ema"] for s in signals_found) / len(signals_found)
+
+        tf_display = (
+            ", ".join(ema_indicator.intervals)
+            .replace("MIN", "m")
+            .replace("HRS", "h")
+            .replace("DAY", "d")
+        )
+
+        reason = "Price crossed above EMA" if direction == "BUY" else "Price crossed below EMA"
+
+        return {
+            "indicator": "EMA",
+            "symbol": asset.symbol,
+            "direction": direction,
+            "current_price": current_price,
+            "value": avg_ema,
+            "intervals": tf_display,
+            "reason": reason,
+            "emoji": "📈" if direction == "BUY" else "📉",
+        }
 
     def calculate_support_resistance(
         self, quotes: List, lookback: int = 50, num_levels: int = 6
