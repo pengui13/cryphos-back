@@ -58,6 +58,7 @@ class LiquidationFetcher:
     async def start(self):
         self.running = True
         self.redis = await redis.from_url(REDIS_URL)
+        print("Connected to Redis")
 
         while self.running:
             try:
@@ -109,6 +110,17 @@ class LiquidationFetcher:
 
         liq_type = "short" if side == "buy" else "long"
 
+        liquidation = {
+            "symbol": symbol,
+            "type": liq_type,
+            "price": price,
+            "qty": size,
+            "usd": usd_value,
+            "ts": datetime.utcnow().isoformat(),
+        }
+
+        await self.redis.publish("liquidations", json.dumps(liquidation))
+
         bucket_size = BUCKET_SIZES.get(symbol, BUCKET_SIZES["default"])
         bucket = int(price // bucket_size) * bucket_size
 
@@ -130,22 +142,13 @@ class LiquidationFetcher:
         pipe.expire(total_stats_key, TTL_SECONDS)
 
         if usd_value > 50_000:
-            big_liq = json.dumps(
-                {
-                    "symbol": symbol,
-                    "type": liq_type,
-                    "price": price,
-                    "usd": usd_value,
-                    "ts": datetime.utcnow().isoformat(),
-                }
-            )
+            big_liq = json.dumps(liquidation)
             pipe.lpush("big_liquidations", big_liq)
             pipe.ltrim("big_liquidations", 0, 99)
 
         await pipe.execute()
 
-        if usd_value > 100_000:
-            print(f"{symbol} {liq_type.upper()} ${usd_value:,.0f} @ {price:,.2f}")
+        print(f"{symbol} {liq_type.upper()} ${usd_value:,.0f} @ {price:,.2f}")
 
 
 async def main():
