@@ -7,6 +7,7 @@ from .models import (
     FnGValue,
     UserBalance,
     RsiValue,
+    Signal,
     RsiIndicator,
     BotSignal,
     BotBalance,
@@ -17,6 +18,8 @@ admin.site.register(Bot)
 admin.site.register(UserBalance)
 admin.site.register(BotSignal)
 admin.site.register(FnGValue)
+admin.site.register(Signal)
+
 admin.site.register(FundingRate)
 
 admin.site.register(BotBalance)
