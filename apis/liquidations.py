@@ -1,15 +1,15 @@
 import websockets
 import asyncio
 import redis.asyncio as redis
-from datetime import datetime
+from datetime import datetime, timezone
 import json
 
 OKX_URL = "wss://ws.okx.com:8443/ws/v5/public"
 REDIS_URL = "redis://redis:6379/1"
 
 BUCKET_SIZES = {
-    "BTC-USDT-SWAP": 100,
-    "ETH-USDT-SWAP": 10,
+    "BTCUSDT": 100,
+    "ETHUSDT": 10,
     "default": 0.01,
 }
 
@@ -73,20 +73,21 @@ class LiquidationFetcher:
         if "data" not in data:
             return
 
-        for liq_data in data.get("data", []):
-            await self._process_liquidation(liq_data)
+        # OKX format: data[].instId + data[].details[]
+        for item in data.get("data", []):
+            inst_id = item.get("instId", "")
+            for detail in item.get("details", []):
+                await self._process_liquidation(inst_id, detail)
 
-    async def _process_liquidation(self, liq_data: dict):
+    async def _process_liquidation(self, inst_id: str, detail: dict):
+        side = detail.get("side", "").lower()
+        size = float(detail.get("sz", 0))
+        price = float(detail.get("bkPx", 0))
 
-        inst_id = liq_data.get("instId", "")
-        side = liq_data.get("side", "").lower()
-        size = float(liq_data.get("sz", 0))
-        price = float(liq_data.get("bkPx", 0))
-
+        # Convert instId: "DOGE-USDT-SWAP" -> "DOGEUSDT"
         symbol = inst_id.replace("-SWAP", "").replace("-", "")
 
         usd_value = size * price
-
         liq_type = "short" if side == "buy" else "long"
 
         liquidation = {
@@ -95,13 +96,19 @@ class LiquidationFetcher:
             "price": price,
             "qty": size,
             "usd": usd_value,
-            "ts": datetime.utcnow().isoformat(),
+            "ts": datetime.now(timezone.utc).isoformat(),
             "exchange": "okx",
         }
 
+        # Publish to Redis pub/sub for WebSocket clients
         await self.redis.publish("liquidations", json.dumps(liquidation))
 
-        bucket_size = BUCKET_SIZES.get(inst_id, BUCKET_SIZES["default"])
+        # Store in recent liquidations list (for initial load)
+        await self.redis.lpush("recent_liquidations", json.dumps(liquidation))
+        await self.redis.ltrim("recent_liquidations", 0, 99)  # Keep last 100
+
+        # Heatmap data
+        bucket_size = BUCKET_SIZES.get(symbol, BUCKET_SIZES["default"])
         bucket = int(price // bucket_size) * bucket_size
 
         heatmap_key = f"heatmap:{symbol}"
@@ -122,13 +129,12 @@ class LiquidationFetcher:
         pipe.expire(total_stats_key, TTL_SECONDS)
 
         if usd_value > 50_000:
-            big_liq = json.dumps(liquidation)
-            pipe.lpush("big_liquidations", big_liq)
+            pipe.lpush("big_liquidations", json.dumps(liquidation))
             pipe.ltrim("big_liquidations", 0, 99)
 
         await pipe.execute()
 
-        print(f" {symbol} {liq_type.upper()} ${usd_value:,.0f} @ {price:,.2f}")
+        print(f"{symbol} {liq_type.upper()} ${usd_value:,.0f} @ {price:,.2f}")
 
 
 async def main():

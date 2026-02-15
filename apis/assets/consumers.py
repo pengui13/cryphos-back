@@ -12,10 +12,26 @@ class LiquidationConsumer(AsyncWebsocketConsumer):
         await self.accept()
 
         self.redis = await redis.from_url(REDIS_URL)
+
+        # Отправляем последние ликвидации при подключении
+        await self._send_recent_liquidations()
+
+        # Подписываемся на новые
         self.pubsub = self.redis.pubsub()
         await self.pubsub.subscribe("liquidations")
-
         self.listener_task = asyncio.create_task(self._listen_redis())
+
+    async def _send_recent_liquidations(self):
+        """Отправляем последние 50 ликвидаций при подключении"""
+        try:
+            recent = await self.redis.lrange("recent_liquidations", 0, 49)
+
+            # Отправляем в обратном порядке (старые первыми)
+            for item in reversed(recent):
+                data = item.decode() if isinstance(item, bytes) else item
+                await self.send(text_data=data)
+        except Exception as e:
+            print(f"Error sending recent liquidations: {e}")
 
     async def disconnect(self, close_code):
         if hasattr(self, "listener_task"):
@@ -37,5 +53,4 @@ class LiquidationConsumer(AsyncWebsocketConsumer):
             pass
 
     async def receive(self, text_data):
-
         pass
