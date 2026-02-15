@@ -196,7 +196,7 @@ class BotBalanceSerializer(serializers.ModelSerializer):
 class EmaIndicatorSerializer(serializers.ModelSerializer):
     class Meta:
         model = EmaIndicator
-        fields = ["intervals", "periods"]
+        fields = ["intervals", "period"]
 
 
 class MaIndicatorSerializer(serializers.ModelSerializer):
