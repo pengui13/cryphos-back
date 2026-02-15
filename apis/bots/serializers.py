@@ -198,6 +198,11 @@ class EmaIndicatorSerializer(serializers.ModelSerializer):
         model = EmaIndicator
         fields = ["intervals", "period"]
 
+    def create(self, validated_data):
+        bot = self.context["bot"]
+        validated_data["bot"] = bot
+        return super().create(validated_data)
+
 
 class MaIndicatorSerializer(serializers.ModelSerializer):
     class Meta:

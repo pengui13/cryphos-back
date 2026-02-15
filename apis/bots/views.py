@@ -46,15 +46,6 @@ from .models import (
 
 REDIS_URL = "redis://redis:6379/1"
 
-serializer_classes = {
-    "rsi": RsiIndicatorSerializer,
-    "ma": MaIndicatorSerializer,
-    "macd": MacdIndicatorSerializer,
-    "bollinger_bands": BollingerBandsIndicatorSerializer,
-    "atr": AtrIndicatorSerializer,
-    "obv": ObvIndicatorSerializer,
-}
-
 
 DEFAULT_FREQUENCY = 50.0
 DEFAULT_ACCURACY = 70.0
@@ -99,12 +90,6 @@ class GetFnGValue(APIView):
         classification = r.get("fng_class") or None
 
         return Response({"value": value, "class": classification})
-
-
-serializer_classes = {
-    "rsi": RsiIndicatorSerializer,
-    "sr": SupportResistanceIndicatorSerializer,
-}
 
 
 class RiskSettingsView(RetrieveUpdateAPIView):
