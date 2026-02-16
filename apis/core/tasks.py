@@ -210,9 +210,8 @@ def calculate_signals():
                 ma_signal = calculate_ma_signal(asset, bot, calc)
                 if ma_signal:
                     signals.append(ma_signal)
-                    logger.info(f"MMA: {ema_signal['direction']}")
+                    logger.info(f"MA: {ma_signal['direction']}")
                 else:
-                    logger.info(f"MMA: No signal")
                     continue
 
             if len(signals) != enabled_count:
