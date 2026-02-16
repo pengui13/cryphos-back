@@ -45,6 +45,7 @@ class BotSerializer(serializers.ModelSerializer):
     bb = serializers.SerializerMethodField()
     sr = serializers.SerializerMethodField()
     ema = serializers.SerializerMethodField()
+    ma = serializers.SerializerMethodField()
 
     def get_rsi(self, obj):
         ind = obj.rsi_indicators.first()
@@ -53,6 +54,10 @@ class BotSerializer(serializers.ModelSerializer):
     def get_bb(self, obj):
         ind = obj.bollinger_bands_indicators.first()
         return BollingerBandsIndicatorSerializer(ind).data if ind else None
+
+    def get_ma(self, obj):
+        ind = obj.ma_indicators.first()
+        return MaIndicatorSerializer(ind).data if ind else None
 
     def get_ema(self, obj):
         ind = obj.ema_indicators.first()
@@ -75,6 +80,7 @@ class BotSerializer(serializers.ModelSerializer):
             "bb",
             "sr",
             "ema",
+            "ma",
             "accuracy",
             "frequency",
             "max_drawdown",
@@ -92,6 +98,7 @@ class BotSerializer(serializers.ModelSerializer):
             "sr",
             "pnl",
             "ema",
+            "ma",
             "last_activated",
             "runtime",
             "last_heartbeat",

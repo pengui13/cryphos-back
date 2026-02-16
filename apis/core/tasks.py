@@ -165,8 +165,9 @@ def calculate_signals():
             has_bb = bot.bollinger_bands_indicators.exists()
             has_sr = bot.sr_indicators.exists()
             has_ema = bot.ema_indicators.exists()
+            has_ma = bot.ma_indicators.exists()
 
-            enabled_count = sum([has_rsi, has_bb, has_sr, has_ema])
+            enabled_count = sum([has_rsi, has_bb, has_sr, has_ema, has_ma])
 
             signals = []
 
@@ -200,6 +201,15 @@ def calculate_signals():
                 ema_signal = calculate_ema_signal(asset, bot, calc)
                 if ema_signal:
                     signals.append(ema_signal)
+                    logger.info(f"EMA: {ema_signal['direction']}")
+                else:
+                    logger.info(f"EMA: No signal")
+                    continue
+
+            if has_ma:
+                ma_signal = calculate_ma_signal(asset, bot, calc)
+                if ma_signal:
+                    signals.append(ma_signal)
                     logger.info(f"EMA: {ema_signal['direction']}")
                 else:
                     logger.info(f"EMA: No signal")
@@ -379,6 +389,99 @@ def calculate_rsi_signal(asset, bot, calc) -> Optional[Dict]:
             "Oversold · Bounce expected" if direction == "BUY" else "Overbought · Pullback expected"
         ),
         "emoji": "📊",
+    }
+
+
+def calculate_ma_signal(asset, bot, calc) -> Optional[Dict]:
+
+    ma_indicator = bot.ma_indicators.first()
+    if not ma_indicator:
+        return None
+
+    period = ma_indicator.period
+    symbol = f"{asset.symbol.upper()}USDT"
+
+    last = r.hget("prices:last", symbol)
+    current_price = float(last) if last else None
+    if not current_price:
+        return None
+
+    signals_found: List[Dict] = []
+
+    for interval in ma_indicator.intervals:
+        prices = list(
+            HistQuotes.objects.filter(symbol=asset, interval=interval)
+            .order_by("-time")[: period * 4]
+            .values_list("close_price", flat=True)
+        )
+        if not prices or len(prices) < period + 2:
+            continue
+
+        prev_close = float(prices[0])
+
+        prices[0] = Decimal(str(current_price))
+
+        ma_curr = calc.calculate_ma(prices, period)
+        if ma_curr is None:
+            continue
+
+        prices_prev = prices.copy()
+        prices_prev[0] = Decimal(str(prev_close))
+        ma_prev = calc.calculate_ma(prices_prev, period)
+        if ma_prev is None:
+            continue
+
+        crossed_up = (prev_close <= ma_prev) and (current_price > ma_curr)
+        crossed_down = (prev_close >= ma_prev) and (current_price < ma_curr)
+
+        if crossed_up:
+            signals_found.append(
+                {
+                    "direction": "BUY",
+                    "interval": interval,
+                    "ma": float(ma_curr),
+                    "prev_close": prev_close,
+                }
+            )
+        elif crossed_down:
+            signals_found.append(
+                {
+                    "direction": "SELL",
+                    "interval": interval,
+                    "ma": float(ma_curr),
+                    "prev_close": prev_close,
+                }
+            )
+
+    if not signals_found:
+        return None
+
+    directions = [s["direction"] for s in signals_found]
+    if len(set(directions)) != 1:
+        logger.info(f"      [{asset.symbol}] MA timeframes disagree: {directions}")
+        return None
+
+    direction = directions[0]
+    avg_ma = sum(s["ma"] for s in signals_found) / len(signals_found)
+
+    tf_display = (
+        ", ".join(ma_indicator.intervals)
+        .replace("MIN", "m")
+        .replace("HRS", "h")
+        .replace("DAY", "d")
+    )
+
+    reason = "Price crossed above MA" if direction == "BUY" else "Price crossed below MA"
+
+    return {
+        "indicator": "MA",
+        "symbol": asset.symbol,
+        "direction": direction,
+        "current_price": current_price,
+        "value": avg_ma,
+        "intervals": tf_display,
+        "reason": reason,
+        "emoji": "📈" if direction == "BUY" else "📉",
     }
 
 

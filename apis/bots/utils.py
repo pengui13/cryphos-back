@@ -181,3 +181,12 @@ class IndicatorsCalc:
         ema = ta.ema(df["close"], length=period).iloc[-1]
 
         return round(ema, 4) if pd.notna(ema) else None
+
+    def calculate_ma(self, prices: list[Decimal], period: int) -> Optional[float]:
+        if len(prices) < period:
+            return None
+
+        df = pd.DataFrame({"close": [float(p) for p in reversed(prices)]})
+        ma = ta.ma(df["close"], length=period).iloc[-1]
+
+        return round(ma, 4) if pd.notna(ma) else None
