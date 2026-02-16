@@ -125,6 +125,7 @@ serializer_classes = {
     "bb": BollingerBandsIndicatorSerializer,
     "sr": SupportResistanceIndicatorSerializer,
     "ema": EmaIndicatorSerializer,
+    "ma": MaIndicatorSerializer,
 }
 
 

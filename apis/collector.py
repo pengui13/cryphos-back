@@ -61,7 +61,6 @@ SYMBOLS = [
 
 LAST_HASH = "prices:last"
 TS_HASH = "prices:ts"
-VOL_HASH = "prices:vol"
 # TODO Rename it , because currently naming price:volume is a piece of shit
 
 REDIS_URL = "redis://redis:6379/1"
@@ -93,13 +92,11 @@ async def collector():
                     data = msg.get("data", {})
                     symbol = normalize_symbol(stream)
                     price = data.get("c")
-                    volume = data.get("v")
                     if price is None:
                         continue
                     ts = int(time.time() * 1000)
                     pipe = r.pipeline()
                     pipe.hset(LAST_HASH, symbol, price)
-                    pipe.hset(VOL_HASH, symbol, volume)
                     pipe.hset(TS_HASH, symbol, ts)
                     await pipe.execute()
 

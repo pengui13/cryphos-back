@@ -58,7 +58,7 @@ SYMBOLS = [
 
 INTERVALS = ["1m", "5m", "15m", "30m", "1h", "1d"]
 
-VOL_HASH = "prices:klines"
+KLINES_HASH = "prices:klines"
 REDIS_URL = "redis://redis:6379/1"
 
 WS_BASE = "wss://stream.binance.com:9443/stream?streams="
@@ -107,7 +107,7 @@ async def consume_interval(symbols, interval: str, r):
                     }
 
                     field = f"{symbol}:{k_interval}"
-                    await r.hset(VOL_HASH, field, json.dumps(payload))
+                    await r.hset(KLINES_HASH, field, json.dumps(payload))
 
         except (asyncio.CancelledError, KeyboardInterrupt):
             raise
@@ -120,7 +120,6 @@ async def consume_interval(symbols, interval: str, r):
 
 async def main():
     r = redis.from_url(REDIS_URL, decode_responses=True)
-
     tasks = []
     for interval in INTERVALS:
         tasks.append(asyncio.create_task(consume_interval(SYMBOLS, interval, r)))
