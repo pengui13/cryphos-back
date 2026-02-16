@@ -187,6 +187,6 @@ class IndicatorsCalc:
             return None
 
         df = pd.DataFrame({"close": [float(p) for p in reversed(prices)]})
-        ma = ta.ma(df["close"], length=period).iloc[-1]
+        ma = ta.sma(df["close"], length=period).iloc[-1]
 
         return round(ma, 4) if pd.notna(ma) else None
