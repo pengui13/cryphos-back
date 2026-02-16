@@ -30,14 +30,11 @@ services:
       retries: 20
 
   backend:
-    build:
-      context: .
-    volumes:
-      - ./staticfiles:/app/staticfiles
+    build: .
+    image: cryphos-app:latest
     container_name: cryphos-backend
     restart: always
-    env_file:
-      - .env
+    env_file: .env
     depends_on:
       db:
         condition: service_healthy
@@ -47,102 +44,81 @@ services:
       - "127.0.0.1:8000:8000"
     working_dir: /app/apis
     environment:
-      - PYTHONPATH=/app
+      PYTHONPATH: /app
+    volumes:
+      - ./staticfiles:/app/staticfiles
     command: >
-      sh -c "/app/.venv/bin/python manage.py migrate &&
-             exec /app/.venv/bin/daphne -b 0.0.0.0 -p 8000 apis.asgi:application"
+      sh -c "python manage.py migrate &&
+             exec daphne -b 0.0.0.0 -p 8000 apis.asgi:application"
 
   liquidations:
-    build:
-      context: .
+    image: cryphos-app:latest
+    depends_on:
+      - backend
     container_name: cryphos-liquidations
     restart: always
-    env_file:
-      - .env
-    depends_on:
-      redis:
-        condition: service_healthy
+    env_file: .env
     working_dir: /app/apis
     environment:
-      - PYTHONPATH=/app
-      - REDIS_URL=redis://redis:6379/1
-    command: >
-      sh -c "exec /app/.venv/bin/python liquidations.py"
+      PYTHONPATH: /app
+      REDIS_URL: redis://redis:6379/1
+    command: python liquidations.py
 
   collector:
-    build:
-      context: .
+    image: cryphos-app:latest
+    depends_on:
+      - backend
     container_name: cryphos-collector
     restart: always
-    env_file:
-      - .env
-    depends_on:
-      redis:
-        condition: service_healthy
+    env_file: .env
     working_dir: /app/apis
     environment:
-      - PYTHONPATH=/app
-      - REDIS_URL=redis://redis:6379/1
-    command: >
-      sh -c "exec /app/.venv/bin/python collector.py"
+      PYTHONPATH: /app
+      REDIS_URL: redis://redis:6379/1
+    command: python collector.py
+
   celery:
-    build:
-      context: .
+    image: cryphos-app:latest
+    depends_on:
+      - backend
+      - db
+      - redis
     container_name: cryphos-celery
     restart: always
-    env_file:
-      - .env
-    depends_on:
-      backend:
-        condition: service_started
-      db:
-        condition: service_healthy
-      redis:
-        condition: service_healthy
+    env_file: .env
     working_dir: /app/apis
     environment:
-      - PYTHONPATH=/app
-    command: >
-      sh -c "exec /app/.venv/bin/celery -A apis worker -l info --concurrency=2"
+      PYTHONPATH: /app
+    command: celery -A apis worker -l info --concurrency=2
 
   celery-beat:
-    build:
-      context: .
+    image: cryphos-app:latest
+    depends_on:
+      - backend
+      - db
+      - redis
     container_name: cryphos-celery-beat
     restart: always
-    env_file:
-      - .env
-    depends_on:
-      backend:
-        condition: service_started
-      db:
-        condition: service_healthy
-      redis:
-        condition: service_healthy
+    env_file: .env
     working_dir: /app/apis
     environment:
-      - PYTHONPATH=/app
+      PYTHONPATH: /app
     volumes:
       - celerybeat_data:/data
-    command: >
-      sh -c "exec /app/.venv/bin/celery -A apis beat -l info --schedule=/data/celerybeat-schedule"
+    command: celery -A apis beat -l info --schedule=/data/celerybeat-schedule
 
   tg:
-    build:
-      context: .
-    container_name: tg
-    restart: always
-    env_file:
-      - .env
+    image: cryphos-app:latest
     depends_on:
-      backend:
-        condition: service_started
-      db:
-        condition: service_healthy
+      - backend
+      - db
+    container_name: cryphos-tg
+    restart: always
+    env_file: .env
     working_dir: /app/apis
     environment:
-      - PYTHONPATH=/app
-    command: [ "/app/.venv/bin/python", "manage.py", "tg" ]
+      PYTHONPATH: /app
+    command: python manage.py tg
     stop_grace_period: 20s
 
 volumes:
