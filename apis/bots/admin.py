@@ -12,6 +12,7 @@ from .models import (
     BotSignal,
     BotBalance,
     EmaIndicator,
+    MaIndicator,
 )
 
 # Register your models here.
@@ -20,6 +21,8 @@ admin.site.register(UserBalance)
 admin.site.register(BotSignal)
 admin.site.register(FnGValue)
 admin.site.register(Signal)
+admin.site.register(MaIndicator)
+
 admin.site.register(EmaIndicator)
 
 
