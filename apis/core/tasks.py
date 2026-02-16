@@ -191,7 +191,7 @@ def calculate_signals():
                 sr_signal = calculate_sr_signal(asset, bot, calc)
                 if sr_signal:
                     signals.append(sr_signal)
-                    logger.info(f"    ✅ SR: {sr_signal['direction']}")
+                    logger.info(f"     SR: {sr_signal['direction']}")
                 else:
                     logger.info(f"SR: No signal")
                     continue

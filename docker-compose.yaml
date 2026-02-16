@@ -77,6 +77,19 @@ services:
       REDIS_URL: redis://redis:6379/1
     command: python collector.py
 
+  klines_socket:
+    image: cryphos-app:latest
+    depends_on:
+      - backend
+    container_name: cryphos-klines
+    restart: always
+    env_file: .env
+    working_dir: /app/apis
+    environment:
+      PYTHONPATH: /app
+      REDIS_URL: redis://redis:6379/1
+    command: python klines_socket.py
+
   celery:
     image: cryphos-app:latest
     depends_on:
