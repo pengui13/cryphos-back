@@ -1,6 +1,7 @@
-from rest_framework import serializers
-from assets.models import AssetCryptoCoin, HistQuotes
 from bots.models import RsiValue
+from rest_framework import serializers
+
+from assets.models import AssetCryptoCoin, HistQuotes
 
 
 class AssetsSerializer(serializers.ModelSerializer):

@@ -1,8 +1,9 @@
 import asyncio
 import json
 import random
-import websockets
+
 import redis.asyncio as redis
+import websockets
 
 SYMBOLS = [
     "btcusdt",

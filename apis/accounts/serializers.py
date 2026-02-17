@@ -1,11 +1,13 @@
-from django.contrib.auth import get_user_model, authenticate
-from rest_framework import serializers
-from rest_framework_simplejwt.tokens import RefreshToken
-from .models import PendingRegistration
+from datetime import timedelta
+from random import randint
+
+from django.contrib.auth import authenticate, get_user_model
 from django.contrib.auth.hashers import make_password
 from django.utils import timezone
-from random import randint
-from datetime import timedelta
+from rest_framework import serializers
+from rest_framework_simplejwt.tokens import RefreshToken
+
+from .models import PendingRegistration
 from .utils import send_verification_code
 
 User = get_user_model()
@@ -23,20 +25,20 @@ class RegisterStartSerializer(serializers.Serializer):
     password = serializers.CharField(write_only=True, min_length=8)
     password2 = serializers.CharField(write_only=True, min_length=8)
 
-    def validate(self, data):
-        if data["password"] != data["password2"]:
+    def validate(self, attrs):
+        if attrs["password"] != attrs["password2"]:
             raise serializers.ValidationError("Passwords must match.")
-        if User.objects.filter(email__iexact=data["email"]).exists():
+        if User.objects.filter(email__iexact=attrs["email"]).exists():
             raise serializers.ValidationError("Email is already in use.")
-        if User.objects.filter(username__iexact=data["username"]).exists():
+        if User.objects.filter(username__iexact=attrs["username"]).exists():
             raise serializers.ValidationError("Username is already taken.")
-        return data
+        return attrs
 
-    def create(self, validated):
+    def create(self, validated_data):
 
-        email = validated["email"].strip().lower()
-        username = validated["username"].strip()
-        pw_hash = make_password(validated["password"])
+        email = validated_data["email"].strip().lower()
+        username = validated_data["username"].strip()
+        pw_hash = make_password(validated_data["password"])
         code = f"{randint(0, 999999):06d}"
 
         pending, _ = PendingRegistration.objects.update_or_create(
@@ -60,16 +62,16 @@ class RegisterStartSerializer(serializers.Serializer):
 class RegisterResendSerializer(serializers.Serializer):
     email = serializers.EmailField()
 
-    def validate(self, data):
-        email = data["email"].strip().lower()
+    def validate(self, attrs):
+        email = attrs["email"].strip().lower()
         try:
-            pending = PendingRegistration.objects.get(email=email)
-        except PendingRegistration.DoesNotExist:
-            raise serializers.ValidationError("Invalid code or email.")
-        return data
+            PendingRegistration.objects.get(email=email)
+        except PendingRegistration.DoesNotExist as err:
+            raise serializers.ValidationError("Invalid code or email") from err
+        return attrs
 
-    def create(self, validated):
-        email = validated["email"]
+    def create(self, validated_data):
+        email = validated_data["email"]
         pending = PendingRegistration.objects.get(email=email)
         code = f"{randint(0, 999999):06d}"
         pending.code = code
@@ -83,13 +85,13 @@ class RegisterVerifySerializer(serializers.Serializer):
     email = serializers.EmailField()
     code = serializers.CharField(max_length=6)
 
-    def validate(self, data):
-        email = data["email"].strip().lower()
-        code = data["code"].strip()
+    def validate(self, attrs):
+        email = attrs["email"].strip().lower()
+        code = attrs["code"].strip()
         try:
             pending = PendingRegistration.objects.get(email=email)
-        except PendingRegistration.DoesNotExist:
-            raise serializers.ValidationError("Invalid code or email.")
+        except PendingRegistration.DoesNotExist as err:
+            raise serializers.ValidationError("Invalid code or email") from err
         if pending.is_expired():
             raise serializers.ValidationError("Code has expired. Please restart registration.")
         if pending.tries >= 5:
@@ -98,18 +100,18 @@ class RegisterVerifySerializer(serializers.Serializer):
             pending.tries += 1
             pending.save(update_fields=["tries"])
             raise serializers.ValidationError("Invalid code.")
-        data["pending"] = pending
-        return data
+        attrs["pending"] = pending
+        return attrs
 
-    def create(self, validated):
-        pending = validated["pending"]
+    def create(self, validated_data):
+        pending = validated_data["pending"]
         if User.objects.filter(email__iexact=pending.email).exists():
             pending.delete()
             return {"detail": "Account already exists. Try logging in."}
 
         user = User(username=pending.username, email=pending.email)
         user.password = pending.password_hash
-        user.is_active = True
+        user.is_active = True  # type: ignore[assignment]
         user.save()
 
         pending.delete()
@@ -122,20 +124,18 @@ class LoginSerializer(serializers.Serializer):
     access = serializers.CharField(read_only=True)
     refresh = serializers.CharField(read_only=True)
 
-    def validate(self, data):
-        email = data.get("email")
-        password = data.get("password")
+    def validate(self, attrs):
+        email = attrs.get("email")
+        password = attrs.get("password")
 
         if not email or not password:
             raise serializers.ValidationError("Email and password are required.")
 
-        # Try to find user by email
         try:
             user = User.objects.get(email=email)
-        except User.DoesNotExist:
-            raise serializers.ValidationError("Invalid credentials.")
+        except User.DoesNotExist as err:
+            raise serializers.ValidationError("Invalid credentials") from err
 
-        # Authenticate using the user's username (since Django auth expects username)
         user = authenticate(username=user.username, password=password)
 
         if not user:
@@ -173,7 +173,7 @@ class ResetVerifySerializer(serializers.Serializer):
     password = serializers.CharField(write_only=True)
     password2 = serializers.CharField(write_only=True)
 
-    def validate(self, data):
-        if data["password"] != data["password2"]:
+    def validate(self, attrs):
+        if attrs["password"] != attrs["password2"]:
             raise serializers.ValidationError({"password": "Passwords do not match"})
-        return data
+        return attrs

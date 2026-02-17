@@ -1,8 +1,43 @@
-[tool.black]
-line-length = 100
-target-version = ['py313']
+[tool.ruff]
+line-length=100
+target-version="py313"
 
-[tool.flake8]
-max-line-length = 100
-extend-ignore = ["E203", "E266", "E501", "W503"]
-exclude = [".git", "__pycache__", ".venv", "*/migrations/*"]
+[tool.ruff.lint]
+select = [
+    "E",
+    "W",   
+    "F",
+    "I",
+    "N",   
+    "UP",
+    "B",
+]
+ignore = [
+    "E203",
+    "E266", 
+    "E501",  
+]
+
+[tool.ruff.lint.per-file-ignores]
+"*/migrations/*" = ["E501"]
+"__init__.py" = ["F401"] 
+
+[tool.ruff.lint.isort]
+known-first-party = ["apis", "config"]
+
+[tool.ty.environment]
+extra-paths = ["apis"]
+python-platform = "linux"
+
+[tool.ty.rules]
+unresolved-attribute = "ignore"
+
+[dependency-groups]
+dev = [
+    "django-stubs>=5.2.9",
+    "pytest>=9.0.2",
+    "pytest-django>=4.12.0",
+    "ruff>=0.15.1",
+    "ty>=0.0.17",
+    "types-redis>=4.6.0.20241004",
+]

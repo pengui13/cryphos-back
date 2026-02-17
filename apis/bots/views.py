@@ -1,47 +1,42 @@
+from decimal import Decimal
+
+import redis
+from assets.models import HistQuotes, Quote
+from django.db import transaction
+from django.db.models import F, Max, Min, Q
+from django.shortcuts import get_object_or_404
+from django.utils import timezone
+from rest_framework import status
+from rest_framework.generics import ListAPIView, RetrieveUpdateAPIView
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
-from rest_framework import status
-from bots.models import Bot, BotBalance, MainBotSettings
-from django.db.models import F, Q
-from django.utils import timezone
-from assets.models import Quote, HistQuotes
-from rest_framework.generics import ListAPIView, RetrieveUpdateAPIView
-from bots.models import Signal
-from .serializers import SignalSerializer
-from decimal import Decimal
-from django.db import transaction
-from bots.models import UserBalance
-from assets.serializers import HistQuotesSerializer
-from .serializers import (
-    BotBalanceSerializer,
-    SupportResistanceIndicatorSerializer,
-    BotSerializer,
-    ObvIndicatorSerializer,
-    MainBotSerializer,
-    RsiIndicatorSerializer,
-    MaIndicatorSerializer,
-    MacdIndicatorSerializer,
-    BollingerBandsIndicatorSerializer,
-    AtrIndicatorSerializer,
-    RiskSerializer,
-    FundingRateSerializer,
-    EmaIndicatorSerializer,
-)
-from django.shortcuts import get_object_or_404
-from django.db.models import Max, Min
-import redis
+
+from bots.models import Bot, BotBalance, MainBotSettings, Signal, UserBalance
+
 from .models import (
-    BotSignal,
-    RsiIndicator,
-    RsiValue,
-    MaValue,
-    MacdValue,
-    BollingerBandsValue,
     AtrValue,
+    BollingerBandsValue,
+    BotSignal,
+    FundingRate,
+    MacdValue,
+    MaValue,
     ObvValue,
     RiskSettings,
-    FundingRate,
+    RsiValue,
+)
+from .serializers import (
+    BollingerBandsIndicatorSerializer,
+    BotBalanceSerializer,
+    BotSerializer,
+    EmaIndicatorSerializer,
+    FundingRateSerializer,
+    MainBotSerializer,
+    MaIndicatorSerializer,
+    RiskSerializer,
+    RsiIndicatorSerializer,
+    SignalSerializer,
+    SupportResistanceIndicatorSerializer,
 )
 
 REDIS_URL = "redis://redis:6379/1"
@@ -302,312 +297,312 @@ def calc_rsi_for_candles(candles, period: int = 14):
     return candles
 
 
-class Backtest(APIView):
-    permission_classes = [IsAuthenticated]
+# class Backtest(APIView):
+#     permission_classes = [IsAuthenticated]
 
-    def post(self, request, bot_id):
-        bot = get_object_or_404(Bot, id=bot_id, owner=request.user)
-        data = request.data
+#     def post(self, request, bot_id):
+#         bot = get_object_or_404(Bot, id=bot_id, owner=request.user)
+#         data = request.data
 
-        rsi_obj = RsiIndicator.objects.filter(bot=bot).first()
-        if rsi_obj is None:
-            return Response({"detail": "RSI config not found for bot."}, status=400)
+#         rsi_obj = RsiIndicator.objects.filter(bot=bot).first()
+#         if rsi_obj is None:
+#             return Response({"detail": "RSI config not found for bot."}, status=400)
 
-        bot_assets = bot.bot_assets.all()
-        if not bot_assets.exists():
-            return Response({"detail": "No assets configured for this bot."}, status=400)
+#         bot_assets = bot.bot_assets.all()
+#         if not bot_assets.exists():
+#             return Response({"detail": "No assets configured for this bot."}, status=400)
 
-        timeframes = list(rsi_obj.intervals or [])
-        if not timeframes:
-            return Response({"detail": "No timeframes configured for RSI indicator."}, status=400)
+#         timeframes = list(rsi_obj.intervals or [])
+#         if not timeframes:
+#             return Response({"detail": "No timeframes configured for RSI indicator."}, status=400)
 
-        sorted_timeframes = sorted(timeframes, key=get_timeframe_minutes)
-        base_timeframe = sorted_timeframes[0]
+#         sorted_timeframes = sorted(timeframes, key=get_timeframe_minutes)
+#         base_timeframe = sorted_timeframes[0]
 
-        since = timezone.now() - timezone.timedelta(days=90)
-        since_ts = int(since.timestamp())
+#         since = timezone.now() - timezone.timedelta(days=90)
+#         since_ts = int(since.timestamp())
 
-        usdt_value = Decimal(str(data.get("usdt_value", 1000)))
-        take_profit = Decimal(str(data.get("take_profit", 10)))  # %
-        stop_loss = Decimal(str(data.get("stop_loss", 5)))  # %
+#         usdt_value = Decimal(str(data.get("usdt_value", 1000)))
+#         take_profit = Decimal(str(data.get("take_profit", 10)))  # %
+#         stop_loss = Decimal(str(data.get("stop_loss", 5)))  # %
 
-        all_orders = []
-        results_by_asset = {}
+#         all_orders = []
+#         results_by_asset = {}
 
-        for asset in bot_assets:
-            timeframe_data = {}
+#         for asset in bot_assets:
+#             timeframe_data = {}
 
-            for timeframe in timeframes:
-                candles_qs = HistQuotes.objects.filter(
-                    symbol__symbol=asset.symbol,
-                    interval=timeframe,
-                    time__gte=since_ts,
-                ).order_by("time")
+#             for timeframe in timeframes:
+#                 candles_qs = HistQuotes.objects.filter(
+#                     symbol__symbol=asset.symbol,
+#                     interval=timeframe,
+#                     time__gte=since_ts,
+#                 ).order_by("time")
 
-                candles_data = HistQuotesSerializer(candles_qs, many=True).data
+#                 candles_data = HistQuotesSerializer(candles_qs, many=True).data
 
-                if not candles_data:
-                    timeframe_data[timeframe] = []
-                    continue
+#                 if not candles_data:
+#                     timeframe_data[timeframe] = []
+#                     continue
 
-                candles_data = [
-                    {
-                        **c,
-                        "time": int(c["time"]),
-                        "open_price": str(c["open_price"]),
-                        "high_price": str(c["high_price"]),
-                        "low_price": str(c["low_price"]),
-                        "close_price": str(c["close_price"]),
-                    }
-                    for c in candles_data
-                ]
+#                 candles_data = [
+#                     {
+#                         **c,
+#                         "time": int(c["time"]),
+#                         "open_price": str(c["open_price"]),
+#                         "high_price": str(c["high_price"]),
+#                         "low_price": str(c["low_price"]),
+#                         "close_price": str(c["close_price"]),
+#                     }
+#                     for c in candles_data
+#                 ]
 
-                candles = calc_rsi_for_candles(candles_data, period=rsi_obj.period)
+#                 candles = calc_rsi_for_candles(candles_data, period=rsi_obj.period)
 
-                for c in candles:
-                    c.pop("avg_gain", None)
-                    c.pop("avg_loss", None)
+#                 for c in candles:
+#                     c.pop("avg_gain", None)
+#                     c.pop("avg_loss", None)
 
-                timeframe_data[timeframe] = candles
+#                 timeframe_data[timeframe] = candles
 
-            base_candles = timeframe_data.get(base_timeframe, [])
+#             base_candles = timeframe_data.get(base_timeframe, [])
 
-            if not base_candles:
-                results_by_asset[asset.symbol] = {
-                    "asset": asset.symbol,
-                    "total_pnl": 0.0,
-                    "stats": self._get_empty_stats(),
-                    "orders": [],
-                    "candles": [],
-                    "candles_1MIN": [],
-                    "candles_5MIN": [],
-                }
-                continue
+#             if not base_candles:
+#                 results_by_asset[asset.symbol] = {
+#                     "asset": asset.symbol,
+#                     "total_pnl": 0.0,
+#                     "stats": self._get_empty_stats(),
+#                     "orders": [],
+#                     "candles": [],
+#                     "candles_1MIN": [],
+#                     "candles_5MIN": [],
+#                 }
+#                 continue
 
-            buy_orders = []
-            open_order = None
-            single_tf_mode = len(timeframes) == 1
+#             buy_orders = []
+#             open_order = None
+#             single_tf_mode = len(timeframes) == 1
 
-            for candle in base_candles:
-                rsi = candle.get("rsi")
-                if rsi is None:
-                    continue
+#             for candle in base_candles:
+#                 rsi = candle.get("rsi")
+#                 if rsi is None:
+#                     continue
 
-                price = Decimal(candle["close_price"])
-                candle_time = candle["time"]
+#                 price = Decimal(candle["close_price"])
+#                 candle_time = candle["time"]
 
-                # ENTRY
-                if open_order is None and rsi <= rsi_obj.min:
-                    if single_tf_mode:
-                        buy_signal_confirmed = True
-                    else:
-                        buy_signal_confirmed = _check_buy_intersection(
-                            timeframe_data, timeframes, candle_time, rsi_obj.min
-                        )
+#                 # ENTRY
+#                 if open_order is None and rsi <= rsi_obj.min:
+#                     if single_tf_mode:
+#                         buy_signal_confirmed = True
+#                     else:
+#                         buy_signal_confirmed = _check_buy_intersection(
+#                             timeframe_data, timeframes, candle_time, rsi_obj.min
+#                         )
 
-                    if buy_signal_confirmed:
-                        amount_to_buy = usdt_value / price
+#                     if buy_signal_confirmed:
+#                         amount_to_buy = usdt_value / price
 
-                        order = {
-                            "asset": asset.symbol,
-                            "value": amount_to_buy,
-                            "price": price,
-                            "total": amount_to_buy * price,
-                            "side": "BUY",
-                            "opened": True,
-                            "closed": False,
-                            "open_time": candle_time,
-                            "open_rsi": rsi,
-                            "close_time": None,
-                            "close_price": None,
-                            "close_rsi": None,
-                            "pnl": None,
-                            "close_reason": None,
-                        }
-                        buy_orders.append(order)
-                        open_order = order
-                        candle["order_open"] = order
+#                         order = {
+#                             "asset": asset.symbol,
+#                             "value": amount_to_buy,
+#                             "price": price,
+#                             "total": amount_to_buy * price,
+#                             "side": "BUY",
+#                             "opened": True,
+#                             "closed": False,
+#                             "open_time": candle_time,
+#                             "open_rsi": rsi,
+#                             "close_time": None,
+#                             "close_price": None,
+#                             "close_rsi": None,
+#                             "pnl": None,
+#                             "close_reason": None,
+#                         }
+#                         buy_orders.append(order)
+#                         open_order = order
+#                         candle["order_open"] = order
 
-                    continue
+#                     continue
 
-                if open_order is not None:
-                    price_change_pct = (
-                        (price - open_order["price"]) / open_order["price"]
-                    ) * Decimal("100")
+#                 if open_order is not None:
+#                     price_change_pct = (
+#                         (price - open_order["price"]) / open_order["price"]
+#                     ) * Decimal("100")
 
-                    if price_change_pct >= take_profit:
-                        open_order["opened"] = False
-                        open_order["closed"] = True
-                        open_order["close_time"] = candle_time
-                        open_order["close_price"] = price
-                        open_order["close_rsi"] = rsi
-                        open_order["pnl"] = (price - open_order["price"]) * open_order["value"]
-                        open_order["close_reason"] = "take_profit"
-                        candle["order_close"] = open_order
-                        open_order = None
-                        continue
+#                     if price_change_pct >= take_profit:
+#                         open_order["opened"] = False
+#                         open_order["closed"] = True
+#                         open_order["close_time"] = candle_time
+#                         open_order["close_price"] = price
+#                         open_order["close_rsi"] = rsi
+#                         open_order["pnl"] = (price - open_order["price"]) * open_order["value"]
+#                         open_order["close_reason"] = "take_profit"
+#                         candle["order_close"] = open_order
+#                         open_order = None
+#                         continue
 
-                    if price_change_pct <= -stop_loss:
-                        open_order["opened"] = False
-                        open_order["closed"] = True
-                        open_order["close_time"] = candle_time
-                        open_order["close_price"] = price
-                        open_order["close_rsi"] = rsi
-                        open_order["pnl"] = (price - open_order["price"]) * open_order["value"]
-                        open_order["close_reason"] = "stop_loss"
-                        candle["order_close"] = open_order
-                        open_order = None
-                        continue
+#                     if price_change_pct <= -stop_loss:
+#                         open_order["opened"] = False
+#                         open_order["closed"] = True
+#                         open_order["close_time"] = candle_time
+#                         open_order["close_price"] = price
+#                         open_order["close_rsi"] = rsi
+#                         open_order["pnl"] = (price - open_order["price"]) * open_order["value"]
+#                         open_order["close_reason"] = "stop_loss"
+#                         candle["order_close"] = open_order
+#                         open_order = None
+#                         continue
 
-                    if rsi >= rsi_obj.max:
-                        open_order["opened"] = False
-                        open_order["closed"] = True
-                        open_order["close_time"] = candle_time
-                        open_order["close_price"] = price
-                        open_order["close_rsi"] = rsi
-                        open_order["pnl"] = (price - open_order["price"]) * open_order["value"]
-                        open_order["close_reason"] = "rsi_signal"
-                        candle["order_close"] = open_order
-                        open_order = None
+#                     if rsi >= rsi_obj.max:
+#                         open_order["opened"] = False
+#                         open_order["closed"] = True
+#                         open_order["close_time"] = candle_time
+#                         open_order["close_price"] = price
+#                         open_order["close_rsi"] = rsi
+#                         open_order["pnl"] = (price - open_order["price"]) * open_order["value"]
+#                         open_order["close_reason"] = "rsi_signal"
+#                         candle["order_close"] = open_order
+#                         open_order = None
 
-            asset_total_pnl = sum(o["pnl"] for o in buy_orders if o.get("pnl") is not None)
-            asset_stats = self._calculate_stats(buy_orders)
+#             asset_total_pnl = sum(o["pnl"] for o in buy_orders if o.get("pnl") is not None)
+#             asset_stats = self._calculate_stats(buy_orders)
 
-            def last_window(candles_list):
-                if not candles_list:
-                    return []
-                if len(candles_list) <= MAX_RETURNED_CANDLES:
-                    return candles_list
-                return candles_list[-MAX_RETURNED_CANDLES:]
+#             def last_window(candles_list):
+#                 if not candles_list:
+#                     return []
+#                 if len(candles_list) <= MAX_RETURNED_CANDLES:
+#                     return candles_list
+#                 return candles_list[-MAX_RETURNED_CANDLES:]
 
-            candles_1m = last_window(timeframe_data.get("1MIN") or timeframe_data.get("1m") or [])
-            candles_5m = last_window(timeframe_data.get("5MIN") or timeframe_data.get("5m") or [])
-            base_window = last_window(base_candles)
+#             candles_1m = last_window(timeframe_data.get("1MIN") or timeframe_data.get("1m") or [])
+#             candles_5m = last_window(timeframe_data.get("5MIN") or timeframe_data.get("5m") or [])
+#             base_window = last_window(base_candles)
 
-            results_by_asset[asset.symbol] = {
-                "asset": asset.symbol,
-                "total_pnl": float(asset_total_pnl),
-                "stats": asset_stats,
-                "orders": buy_orders,
-                "candles": base_window,
-                "candles_1MIN": candles_1m,
-                "candles_5MIN": candles_5m,
-            }
+#             results_by_asset[asset.symbol] = {
+#                 "asset": asset.symbol,
+#                 "total_pnl": float(asset_total_pnl),
+#                 "stats": asset_stats,
+#                 "orders": buy_orders,
+#                 "candles": base_window,
+#                 "candles_1MIN": candles_1m,
+#                 "candles_5MIN": candles_5m,
+#             }
 
-            all_orders.extend(buy_orders)
+#             all_orders.extend(buy_orders)
 
-        total_pnl = sum(o["pnl"] for o in all_orders if o.get("pnl") is not None)
-        total_stats = self._calculate_stats(all_orders)
+#         total_pnl = sum(o["pnl"] for o in all_orders if o.get("pnl") is not None)
+#         total_stats = self._calculate_stats(all_orders)
 
-        closed_trades = [o for o in all_orders if o.get("closed")]
-        total_invested = usdt_value * len(closed_trades) if closed_trades else Decimal("0")
-        roi = (total_pnl / total_invested * Decimal("100")) if total_invested > 0 else Decimal("0")
+#         closed_trades = [o for o in all_orders if o.get("closed")]
+#         total_invested = usdt_value * len(closed_trades) if closed_trades else Decimal("0")
+#         roi = (total_pnl / total_invested * Decimal("100")) if total_invested > 0 else Decimal("0")
 
-        result = {
-            "asset": "MULTI",
-            "assets_count": len(bot_assets),
-            "timeframes": sorted_timeframes,
-            "rsi_config": {
-                "period": rsi_obj.period,
-                "min": rsi_obj.min,
-                "max": rsi_obj.max,
-            },
-            "parameters": {
-                "usdt_value": float(usdt_value),
-                "take_profit": float(take_profit),
-                "stop_loss": float(stop_loss),
-            },
-            "total_pnl": float(total_pnl),
-            "roi": float(round(roi, 2)),
-            "stats": total_stats,
-            "orders": all_orders,
-            "by_asset": results_by_asset,
-        }
+#         result = {
+#             "asset": "MULTI",
+#             "assets_count": len(bot_assets),
+#             "timeframes": sorted_timeframes,
+#             "rsi_config": {
+#                 "period": rsi_obj.period,
+#                 "min": rsi_obj.min,
+#                 "max": rsi_obj.max,
+#             },
+#             "parameters": {
+#                 "usdt_value": float(usdt_value),
+#                 "take_profit": float(take_profit),
+#                 "stop_loss": float(stop_loss),
+#             },
+#             "total_pnl": float(total_pnl),
+#             "roi": float(round(roi, 2)),
+#             "stats": total_stats,
+#             "orders": all_orders,
+#             "by_asset": results_by_asset,
+#         }
 
-        return Response(result)
+#         return Response(result)
 
-    def _get_empty_stats(self):
-        return {
-            "total_trades": 0,
-            "profitable_trades": 0,
-            "non_profitable_trades": 0,
-            "win_rate": 0.0,
-            "max_pnl": None,
-            "min_pnl": None,
-            "mean_pnl": 0.0,
-            "mean_duration_minutes": 0.0,
-        }
+#     def _get_empty_stats(self):
+#         return {
+#             "total_trades": 0,
+#             "profitable_trades": 0,
+#             "non_profitable_trades": 0,
+#             "win_rate": 0.0,
+#             "max_pnl": None,
+#             "min_pnl": None,
+#             "mean_pnl": 0.0,
+#             "mean_duration_minutes": 0.0,
+#         }
 
-    def _calculate_stats(self, orders):
-        closed_orders = [o for o in orders if o.get("closed") and o.get("pnl") is not None]
+#     def _calculate_stats(self, orders):
+#         closed_orders = [o for o in orders if o.get("closed") and o.get("pnl") is not None]
 
-        if not closed_orders:
-            return self._get_empty_stats()
+#         if not closed_orders:
+#             return self._get_empty_stats()
 
-        pnl_values = [o["pnl"] for o in closed_orders]
-        profitable = [p for p in pnl_values if p > 0]
-        non_profitable = [p for p in pnl_values if p <= 0]
+#         pnl_values = [o["pnl"] for o in closed_orders]
+#         profitable = [p for p in pnl_values if p > 0]
+#         non_profitable = [p for p in pnl_values if p <= 0]
 
-        mean_pnl = sum(pnl_values) / len(pnl_values) if pnl_values else Decimal("0")
+#         mean_pnl = sum(pnl_values) / len(pnl_values) if pnl_values else Decimal("0")
 
-        durations = []
-        for order in closed_orders:
-            if order.get("open_time") and order.get("close_time"):
-                duration_seconds = order["close_time"] - order["open_time"]
-                duration_minutes = duration_seconds / 60
-                durations.append(duration_minutes)
+#         durations = []
+#         for order in closed_orders:
+#             if order.get("open_time") and order.get("close_time"):
+#                 duration_seconds = order["close_time"] - order["open_time"]
+#                 duration_minutes = duration_seconds / 60
+#                 durations.append(duration_minutes)
 
-        mean_duration = sum(durations) / len(durations) if durations else 0
-        win_rate = (len(profitable) / len(closed_orders) * 100) if closed_orders else 0.0
+#         mean_duration = sum(durations) / len(durations) if durations else 0
+#         win_rate = (len(profitable) / len(closed_orders) * 100) if closed_orders else 0.0
 
-        return {
-            "total_trades": len(closed_orders),
-            "profitable_trades": len(profitable),
-            "non_profitable_trades": len(non_profitable),
-            "win_rate": float(round(Decimal(str(win_rate)), 2)),
-            "max_pnl": float(max(pnl_values)) if pnl_values else None,
-            "min_pnl": float(min(pnl_values)) if pnl_values else None,
-            "mean_pnl": float(round(mean_pnl, 2)),
-            "mean_duration_minutes": float(round(mean_duration, 2)),
-        }
+#         return {
+#             "total_trades": len(closed_orders),
+#             "profitable_trades": len(profitable),
+#             "non_profitable_trades": len(non_profitable),
+#             "win_rate": float(round(Decimal(str(win_rate)), 2)),
+#             "max_pnl": float(max(pnl_values)) if pnl_values else None,
+#             "min_pnl": float(min(pnl_values)) if pnl_values else None,
+#             "mean_pnl": float(round(mean_pnl, 2)),
+#             "mean_duration_minutes": float(round(mean_duration, 2)),
+#         }
 
 
-class LeaveBot(APIView):
-    permission_classes = [IsAuthenticated]
+# class LeaveBot(APIView):
+#     permission_classes = [IsAuthenticated]
 
-    def close_all_tx(self, user, bot_balance):
-        signals = BotSignal.objects.filter(bot__owner=user, status="Pending", bot=bot_balance.bot)
-        for signal in signals:
-            signal.status = "Closed"
-            bot_balance.current_balance = F("current_balance") + signal.pnl
-            bot_balance.initial_balance = F("initial_balance") + signal.pnl
-            signal.save()
-            bot_balance.save()
-            bot_balance.refresh_from_db()
+#     def close_all_tx(self, user, bot_balance):
+#         signals = BotSignal.objects.filter(bot__owner=user, status="Pending", bot=bot_balance.bot)
+#         for signal in signals:
+#             signal.status = "Closed"
+#             bot_balance.current_balance = F("current_balance") + signal.pnl
+#             bot_balance.initial_balance = F("initial_balance") + signal.pnl
+#             signal.save()
+#             bot_balance.save()
+#             bot_balance.refresh_from_db()
 
-    def post(self, request, id):
-        user = request.user
-        with transaction.atomic():
-            bot = Bot.objects.filter(id=id, owner=user).first()
-            bot_balance = (
-                BotBalance.objects.select_for_update()
-                .filter(bot__owner=user, bot=bot, initial_balance__gt=0)
-                .first()
-            )
+#     def post(self, request, id):
+#         user = request.user
+#         with transaction.atomic():
+#             bot = Bot.objects.filter(id=id, owner=user).first()
+#             bot_balance = (
+#                 BotBalance.objects.select_for_update()
+#                 .filter(bot__owner=user, bot=bot, initial_balance__gt=0)
+#                 .first()
+#             )
 
-            if not bot_balance:
-                return Response({"error": "No bot balance found"}, status=status.HTTP_404_NOT_FOUND)
-            user_balance = UserBalance.objects.filter(user=user, asset__symbol="USDT").first()
-            self.close_all_tx(user, bot_balance)
-            bot.activate()
-            user_balance.quantity = F("quantity") + bot_balance.current_balance
-            bot_balance.initial_balance = 0
-            bot_balance.current_balance = 0
-            bot_balance.unrealised_pnl = 0
-            bot.save()
-            user_balance.save()
-            bot_balance.save()
-            return Response({"status": "ok"})
+#             if not bot_balance:
+#                 return Response({"error": "No bot balance found"}, status=status.HTTP_404_NOT_FOUND)
+#             user_balance = UserBalance.objects.filter(user=user, asset__symbol="USDT").first()
+#             self.close_all_tx(user, bot_balance)
+#             bot.activate()
+#             user_balance.quantity = F("quantity") + bot_balance.current_balance
+#             bot_balance.initial_balance = 0
+#             bot_balance.current_balance = 0
+#             bot_balance.unrealised_pnl = 0
+#             bot.save()
+#             user_balance.save()
+#             bot_balance.save()
+#             return Response({"status": "ok"})
 
 
 class GetBotSubscribers(APIView):
@@ -620,7 +615,7 @@ class GetBotSubscribers(APIView):
             print(e)
             return Response({"error": "There is no such bot"}, status=status.HTTP_404_NOT_FOUND)
         balances = BotBalance.objects.filter(bot=bot)
-        serializer = GetBotSubscribers(balances, many=True)
+        serializer = GetBotSubscribers(balances, many=True)  # type: ignore[call-arg]
         return Response(serializer.data)
 
 
@@ -954,7 +949,7 @@ def calculate_signal_frequency(cfg):
         return DEFAULT_FREQUENCY
 
     enabled_indicators = []
-    for name, ind in cfg.items():
+    for _, ind in cfg.items():
         if isinstance(ind, dict) and ind.get("enabled", True):
             enabled_indicators.append(ind)
 
@@ -1005,7 +1000,7 @@ def calculate_signal_accuracy(cfg):
         return DEFAULT_ACCURACY
 
     enabled_indicators = []
-    for name, ind in cfg.items():
+    for _, ind in cfg.items():
         if isinstance(ind, dict) and ind.get("enabled", True):
             enabled_indicators.append(ind)
 
@@ -1048,7 +1043,7 @@ def calculate_risk_level(cfg, accuracy):
     base_risk = 100.0 - accuracy
 
     enabled_indicators = []
-    for name, ind in cfg.items():
+    for _, ind in cfg.items():
         if isinstance(ind, dict) and ind.get("enabled", True):
             enabled_indicators.append(ind)
 

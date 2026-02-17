@@ -1,4 +1,5 @@
 import asyncio
+
 import redis.asyncio as redis
 from channels.generic.websocket import AsyncWebsocketConsumer
 
@@ -29,7 +30,7 @@ class LiquidationConsumer(AsyncWebsocketConsumer):
         except Exception as e:
             print(f"Error sending recent liquidations: {e}")
 
-    async def disconnect(self, close_code):
+    async def disconnect(self, code):
         if hasattr(self, "listener_task"):
             self.listener_task.cancel()
 
@@ -48,5 +49,5 @@ class LiquidationConsumer(AsyncWebsocketConsumer):
         except asyncio.CancelledError:
             pass
 
-    async def receive(self, text_data):
+    async def receive(self, text_data=None, bytes_data=None):
         pass

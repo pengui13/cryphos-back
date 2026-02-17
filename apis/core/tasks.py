@@ -1,24 +1,28 @@
 import logging
-from typing import Dict, List, Optional
+from decimal import Decimal
+
+import redis
 import requests
-
-from bots.models import Signal, FundingRate, RiskSettings
 from assets.models import AssetCryptoCoin, HistQuotes
-
+from bots.models import FundingRate, RiskSettings, Signal
+from bots.utils import IndicatorsCalc
 from celery import shared_task
 from django.conf import settings
 from django.contrib.auth import get_user_model
 from django.core.cache import cache
-from bots.utils import IndicatorsCalc
-from core.fetching_service import FetchingService
 from django.utils import timezone
-import redis
-from decimal import Decimal
+
+from core.fetching_service import FetchingService
 
 User = get_user_model()
 logger = logging.getLogger(__name__)
+
 CRYPHOS_URL = "https://cryphos.com"
+FUNDING_URL = "https://fapi.binance.com/fapi/v1/fundingRate"
+FNG_URL = "https://api.alternative.me/fng/"
+
 CRYPHOS_LABEL = "Cryphos"
+INTERVAL_SEC = {"1MIN": 60, "5MIN": 300, "15MIN": 900, "30MIN": 1800, "1HRS": 3600}
 
 r = redis.from_url("redis://redis:6379/1", decode_responses=True)
 
@@ -55,8 +59,7 @@ def fetch_ohlcv_for_interval(interval: str):
 
 @shared_task()
 def parse_fng():
-    URL = "https://api.alternative.me/fng/"
-    response = requests.get(URL)
+    response = requests.get(FNG_URL)
     result = response.json()["data"][0]
     r.set("fng", int(result["value"]))
     r.set("fng_class", result["value_classification"])
@@ -66,10 +69,9 @@ def parse_fng():
 def parse_funding_rate():
     assets = AssetCryptoCoin.objects.all()
     for asset in assets:
-        symbol = asset.symbol.upper()
-        URL = f"https://fapi.binance.com/fapi/v1/fundingRate?symbol={symbol}USDT&limit=1"
         try:
-            response = requests.get(URL)
+            symbol = asset.symbol.upper()
+            response = requests.get(f"{FUNDING_URL}?symbol={symbol}USDT&limit=1")
             result = response.json()[0]
             FundingRate.objects.update_or_create(
                 asset=asset,
@@ -80,7 +82,7 @@ def parse_funding_rate():
                 },
             )
         except Exception as e:
-            print(e)
+            logging.error(e)
 
 
 @shared_task()
@@ -102,7 +104,10 @@ def check_roi():
 
         open_price = float(signal.open_price)
         symbol = f"{signal.asset.symbol.upper()}USDT"
-        current_price = float(r.hget("prices:last", symbol))
+        price =r.hget("prices:last", symbol)
+        if not price:
+            continue
+        current_price = float(price)
 
         if signal.is_long:
             roi = (current_price - open_price) / open_price * 100
@@ -194,7 +199,7 @@ def calculate_signals():
                     signals.append(sr_signal)
                     logger.info(f"     SR: {sr_signal['direction']}")
                 else:
-                    logger.info(f"SR: No signal")
+                    logger.info("SR: No signal")
                     continue
 
             if has_ema:
@@ -203,7 +208,7 @@ def calculate_signals():
                     signals.append(ema_signal)
                     logger.info(f"EMA: {ema_signal['direction']}")
                 else:
-                    logger.info(f"EMA: No signal")
+                    logger.info("EMA: No signal")
                     continue
 
             if has_ma:
@@ -241,7 +246,7 @@ def calculate_signals():
     logger.info("=" * 60)
 
 
-def send_close_signal_telegram(user, signal, roi: float, close_reason: str) -> bool:
+def send_close_signal_telegram(user, signal, roi: float, close_reason: str | None) -> bool:
     """Send signal close notification via Telegram."""
     if not getattr(user, "chat_id", None) or not getattr(user, "tg_approved", False):
         return False
@@ -270,7 +275,7 @@ def send_close_signal_telegram(user, signal, roi: float, close_reason: str) -> b
         return False
 
 
-def build_close_signal_message(signal, roi: float, close_reason: str) -> str:
+def build_close_signal_message(signal, roi: float, close_reason: str | None) -> str:
     """Build formatted Telegram message for closed signal."""
     is_profit = roi > 0
     emoji = "✅" if is_profit else "❌"
@@ -313,18 +318,17 @@ def build_close_signal_message(signal, roi: float, close_reason: str) -> str:
 
 
 def interval_to_sec(period: str) -> int:
-    INTERVAL_SEC = {"1MIN": 60, "5MIN": 300, "15MIN": 900, "30MIN": 1800, "1HRS": 3600}
 
     return INTERVAL_SEC[period] + 20
 
 
-def calculate_rsi_signal(asset, bot, calc) -> Optional[Dict]:
+def calculate_rsi_signal(asset, bot, calc) -> dict | None:
     rsi_indicator = bot.rsi_indicators.first()
     if not rsi_indicator:
         return None
 
     period = rsi_indicator.period
-    rsi_values: List[float] = []
+    rsi_values: list[float] = []
 
     symbol = f"{asset.symbol.upper()}USDT"
     last = r.hget("prices:last", symbol)
@@ -391,7 +395,7 @@ def calculate_rsi_signal(asset, bot, calc) -> Optional[Dict]:
     }
 
 
-def calculate_ma_signal(asset, bot, calc) -> Optional[Dict]:
+def calculate_ma_signal(asset, bot, calc) -> dict | None:
 
     ma_indicator = bot.ma_indicators.first()
     if not ma_indicator:
@@ -405,7 +409,7 @@ def calculate_ma_signal(asset, bot, calc) -> Optional[Dict]:
     if not current_price:
         return None
 
-    signals_found: List[Dict] = []
+    signals_found: list[dict] = []
 
     for interval in ma_indicator.intervals:
         prices = list(
@@ -484,7 +488,7 @@ def calculate_ma_signal(asset, bot, calc) -> Optional[Dict]:
     }
 
 
-def calculate_ema_signal(asset, bot, calc) -> Optional[Dict]:
+def calculate_ema_signal(asset, bot, calc) -> dict | None:
 
     ema_indicator = bot.ema_indicators.first()
     if not ema_indicator:
@@ -498,7 +502,7 @@ def calculate_ema_signal(asset, bot, calc) -> Optional[Dict]:
     if not current_price:
         return None
 
-    signals_found: List[Dict] = []
+    signals_found: list[dict] = []
 
     for interval in ema_indicator.intervals:
         prices = list(
@@ -577,7 +581,7 @@ def calculate_ema_signal(asset, bot, calc) -> Optional[Dict]:
     }
 
 
-def calculate_bollinger_signal(asset, bot, calc) -> Optional[Dict]:
+def calculate_bollinger_signal(asset, bot, calc) -> dict | None:
     """Calculate Bollinger Bands signal for a bot."""
     bb_indicator = bot.bollinger_bands_indicators.first()
     if not bb_indicator:
@@ -593,7 +597,10 @@ def calculate_bollinger_signal(asset, bot, calc) -> Optional[Dict]:
         )
 
         symbol = f"{asset.symbol.upper()}USDT"
-        current_price = float(r.hget("prices:last", symbol))
+        price =r.hget("prices:last", symbol)
+        if not price:
+            continue
+        current_price = float(price)
         prices[0] = current_price
         bb_data = calc.calculate_bollinger_bands(prices, bb_indicator.period, bb_indicator.std_dev)
 
@@ -643,7 +650,7 @@ def calculate_bollinger_signal(asset, bot, calc) -> Optional[Dict]:
     }
 
 
-def calculate_sr_signal(asset, bot, calc) -> Optional[Dict]:
+def calculate_sr_signal(asset, bot, calc) -> dict | None:
     """Calculate Support/Resistance signal for a bot."""
     sr_indicator = bot.sr_indicators.first()
     if not sr_indicator:
@@ -672,8 +679,8 @@ def calculate_sr_signal(asset, bot, calc) -> Optional[Dict]:
 
         current_price = float(quotes[0].close_price)
 
-        supports = [l for l in levels if l < current_price]
-        resistances = [l for l in levels if l > current_price]
+        supports = [level for level in levels if level < current_price]
+        resistances = [level for level in levels if level > current_price]
 
         if not supports or not resistances:
             logger.info(
@@ -737,7 +744,7 @@ def calculate_sr_signal(asset, bot, calc) -> Optional[Dict]:
     }
 
 
-def combine_signals(asset, bot, signals: List[Dict]) -> Dict:
+def combine_signals(asset, bot, signals: list[dict]) -> dict:
     """Combine multiple signals into one message."""
     direction = signals[0]["direction"]
     price = signals[0]["current_price"]
@@ -756,9 +763,8 @@ def combine_signals(asset, bot, signals: List[Dict]) -> Dict:
     }
 
 
-def send_signal_to_owner(bot, signal_data: Dict):
+def send_signal_to_owner(bot, signal_data: dict):
     """Send signal to bot owner via Telegram."""
-    User = get_user_model()
 
     try:
         owner = User.objects.get(id=bot.owner.id)
@@ -807,7 +813,7 @@ def send_signal_to_owner(bot, signal_data: Dict):
         logger.error(f"    ❌ Telegram send failed: {e}")
 
 
-def send_telegram_signal(user, signal_data: Dict, bot=None) -> bool:
+def send_telegram_signal(user, signal_data: dict, bot=None) -> bool:
     """Send trading signal via Telegram."""
     if not getattr(user, "chat_id", None) or not getattr(user, "tg_approved", False):
         logger.info(
@@ -839,7 +845,7 @@ def send_telegram_signal(user, signal_data: Dict, bot=None) -> bool:
         return False
 
 
-def build_telegram_message(data: Dict, bot=None) -> str:
+def build_telegram_message(data: dict, bot=None) -> str:
     """Build formatted Telegram message."""
     is_buy = data["direction"] == "BUY"
 

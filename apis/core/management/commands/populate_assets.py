@@ -1,6 +1,6 @@
 import requests
-from django.core.management.base import BaseCommand
 from assets.models import AssetCryptoCoin
+from django.core.management.base import BaseCommand
 
 BINANCE_BASE_URL = "https://api.binance.com"
 
@@ -16,17 +16,17 @@ def get_top_symbols(limit: int = 50):
 
     # Filter only USDT pairs and sort by quote volume
     usdt_pairs = [
-        t for t in data 
-        if t["symbol"].endswith("USDT") 
+        t for t in data
+        if t["symbol"].endswith("USDT")
         and not t["symbol"].endswith("DOWNUSDT")
         and not t["symbol"].endswith("UPUSDT")
         and "BEAR" not in t["symbol"]
         and "BULL" not in t["symbol"]
     ]
-    
+
     sorted_pairs = sorted(
-        usdt_pairs, 
-        key=lambda x: float(x["quoteVolume"]), 
+        usdt_pairs,
+        key=lambda x: float(x["quoteVolume"]),
         reverse=True
     )
 

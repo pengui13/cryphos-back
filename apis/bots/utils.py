@@ -3,12 +3,11 @@ Indicators calculation utilities for trading bots.
 """
 
 import logging
-from typing import List, Optional, Dict
-from assets.models import HistQuotes
-import redis
 from decimal import Decimal
-import pandas_ta as ta
+
 import pandas as pd
+import pandas_ta as ta
+import redis
 
 logger = logging.getLogger(__name__)
 
@@ -17,7 +16,7 @@ r = redis.from_url("redis://redis:6379/1", decode_responses=True)
 
 class IndicatorsCalc:
 
-    def calculate_rsi(self, prices: list[Decimal], period: int = 14) -> Optional[float]:
+    def calculate_rsi(self, prices: list[Decimal], period: int = 14) -> float | None:
         if len(prices) < period + 1:
             return None
 
@@ -28,11 +27,10 @@ class IndicatorsCalc:
 
     def calculate_bollinger_bands(
         self, prices: list[Decimal], period: int = 20, std_dev: float = 2.0
-    ) -> Optional[Dict[str, float]]:
+    ) -> dict[str, float] | None:
 
         df = pd.DataFrame({"close": [float(p) for p in reversed(prices)]})
-        bbands = ta.bbands(df["close"], length=period, std=std_dev)
-
+        bbands = ta.bbands(df["close"], length=period, std=std_dev)  # type: ignore[call-arg]
         return {
             "upper": bbands[f"BBU_{period}_{std_dev}"].iloc[-1],
             "middle": bbands[f"BBM_{period}_{std_dev}"].iloc[-1],
@@ -40,8 +38,8 @@ class IndicatorsCalc:
         }
 
     def calculate_support_resistance(
-        self, quotes: List, lookback: int = 50, num_levels: int = 6
-    ) -> Optional[List[float]]:
+        self, quotes: list, lookback: int = 50, num_levels: int = 6
+    ) -> list[float] | None:
         """
         Calculate support and resistance levels using local highs/lows.
 
@@ -89,7 +87,7 @@ class IndicatorsCalc:
 
         return clustered_levels[:num_levels]
 
-    def _cluster_levels(self, levels: List[float], threshold: float = 0.005) -> List[float]:
+    def _cluster_levels(self, levels: list[float], threshold: float = 0.005) -> list[float]:
         """
         Cluster price levels that are close together.
 
@@ -126,8 +124,8 @@ class IndicatorsCalc:
         return [round(level, 2) for level in clusters]
 
     def calculate_macd(
-        self, quotes: List, fast_period: int = 12, slow_period: int = 26, signal_period: int = 9
-    ) -> Optional[Dict[str, float]]:
+        self, quotes: list, fast_period: int = 12, slow_period: int = 26, signal_period: int = 9
+    ) -> dict[str, float] | None:
         """
         Calculate MACD (Moving Average Convergence Divergence).
 
@@ -173,7 +171,7 @@ class IndicatorsCalc:
             "histogram": round(histogram, 4),
         }
 
-    def calculate_ema(self, prices: list[Decimal], period: int) -> Optional[float]:
+    def calculate_ema(self, prices: list[Decimal], period: int) -> float | None:
         if len(prices) < period:
             return None
 
@@ -182,7 +180,7 @@ class IndicatorsCalc:
 
         return round(ema, 4) if pd.notna(ema) else None
 
-    def calculate_ma(self, prices: list[Decimal], period: int) -> Optional[float]:
+    def calculate_ma(self, prices: list[Decimal], period: int) -> float | None:
         if len(prices) < period:
             return None
 

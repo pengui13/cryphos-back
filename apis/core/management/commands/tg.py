@@ -1,16 +1,19 @@
 import logging
-from django.core.management.base import BaseCommand
-from django.contrib.auth import get_user_model
-from django.conf import settings
+
 from asgiref.sync import sync_to_async
+from django.conf import settings
+from django.contrib.auth import get_user_model
+from django.core.management.base import BaseCommand
 from telegram import Update
 from telegram.ext import (
     Application,
     CommandHandler,
-    MessageHandler,
     ContextTypes,
+    MessageHandler,
     filters,
 )
+
+User = get_user_model()
 
 logging.basicConfig(
     format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
@@ -23,7 +26,6 @@ class Command(BaseCommand):
     help = "Run the Telegram bot and approve users when they send /start"
 
     def handle(self, *args, **options):
-        User = get_user_model()
 
         @sync_to_async
         def get_user_by_tg(username):

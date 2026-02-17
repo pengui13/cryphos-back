@@ -1,15 +1,15 @@
 from __future__ import annotations
 
 import logging
-from typing import Dict, List, Optional, Tuple
 
 import requests
+from assets.models import AssetCryptoCoin, HistQuotes, Quote
+from bots.utils import IndicatorsCalc
+from django.conf import settings
 from django.contrib.auth import get_user_model
 from django.core.management.base import BaseCommand
-from django.conf import settings
-from assets.models import HistQuotes, AssetCryptoCoin, Quote
 
-from bots.utils import IndicatorsCalc
+User = get_user_model()
 
 logger = logging.getLogger(__name__)
 
@@ -22,7 +22,7 @@ class Command(BaseCommand):
         self.calculate_signals()
         self.stdout.write(self.style.SUCCESS("Done."))
 
-    def _build_telegram_message(self, data: Dict) -> Tuple[str, Optional[dict]]:
+    def _build_telegram_message(self, data: dict) -> tuple[str, dict | None]:
         emoji = "🟢" if data["direction"] == "BUY" else "🔴"
         trend = "📈" if data["direction"] == "BUY" else "📉"
 
@@ -42,7 +42,7 @@ class Command(BaseCommand):
 
         return msg, None
 
-    def send_telegram_signal(self, user, signal_data: Dict) -> bool:
+    def send_telegram_signal(self, user, signal_data: dict) -> bool:
         if not getattr(user, "chat_id", None) or not getattr(user, "tg_approved", False):
             logger.info(f"Skip Telegram: {user.username} not configured.")
             return False
@@ -85,7 +85,7 @@ class Command(BaseCommand):
                 if not rsi_indicator:
                     continue
 
-                rsi_values: List[float] = []
+                rsi_values: list[float] = []
                 latest_quote = None
 
                 for interval in rsi_indicator.intervals:
@@ -140,7 +140,6 @@ class Command(BaseCommand):
                 }
 
                 try:
-                    User = get_user_model()
                     owner = User.objects.get(id=bot.owner.id)
                     sent = self.send_telegram_signal(owner, data)
                     if sent:

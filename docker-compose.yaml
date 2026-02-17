@@ -47,6 +47,7 @@ services:
       PYTHONPATH: /app
     volumes:
       - ./staticfiles:/app/staticfiles
+      - .:/app
     command: >
       sh -c "python manage.py migrate &&
              exec daphne -b 0.0.0.0 -p 8000 apis.asgi:application"
@@ -103,7 +104,8 @@ services:
     environment:
       PYTHONPATH: /app
     command: celery -A apis worker -l info --concurrency=2
-
+    volumes:
+      - .:/app
   celery-beat:
     image: cryphos-app:latest
     depends_on:
@@ -117,6 +119,7 @@ services:
     environment:
       PYTHONPATH: /app
     volumes:
+      - .:/app
       - celerybeat_data:/data
     command: celery -A apis beat -l info --schedule=/data/celerybeat-schedule
 

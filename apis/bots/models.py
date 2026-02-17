@@ -1,11 +1,12 @@
-from django.db import models
+from datetime import timedelta
+
+from assets.models import AssetCryptoCoin
 from django.conf import settings
 from django.contrib.postgres.fields import ArrayField
-from django.utils import timezone
-from datetime import timedelta
 from django.core.exceptions import ValidationError
-from assets.models import AssetCryptoCoin
-from django.core.validators import MinValueValidator, MaxValueValidator
+from django.core.validators import MaxValueValidator, MinValueValidator
+from django.db import models
+from django.utils import timezone
 
 User = settings.AUTH_USER_MODEL
 
@@ -87,9 +88,6 @@ class Bot(models.Model):
         if self.is_active and self.last_activated:
             now = timezone.now()
             session_runtime = int((now - self.last_activated).total_seconds())
-
-            today = now.date().isoformat()
-
             self.runtime += session_runtime
             self.is_active = False
             self.last_activated = None
