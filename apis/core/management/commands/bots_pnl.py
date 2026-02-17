@@ -120,7 +120,6 @@ class Command(BaseCommand):
     def handle(self, *args, **options):
         self.stdout.write("Starting position update loop")
         try:
-
             try:
                 self.quote_update()
             except Exception as e:

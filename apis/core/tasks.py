@@ -104,7 +104,7 @@ def check_roi():
 
         open_price = float(signal.open_price)
         symbol = f"{signal.asset.symbol.upper()}USDT"
-        price =r.hget("prices:last", symbol)
+        price = r.hget("prices:last", symbol)
         if not price:
             continue
         current_price = float(price)
@@ -597,7 +597,7 @@ def calculate_bollinger_signal(asset, bot, calc) -> dict | None:
         )
 
         symbol = f"{asset.symbol.upper()}USDT"
-        price =r.hget("prices:last", symbol)
+        price = r.hget("prices:last", symbol)
         if not price:
             continue
         current_price = float(price)
@@ -871,7 +871,7 @@ def build_telegram_message(data: dict, bot=None) -> str:
         reasons_str = "\n".join([f"• {r}" for r in data["reasons"]])
 
         msg = f"""
-{emoji} <b>{data['symbol']}/USDT</b> · {action}
+{emoji} <b>{data["symbol"]}/USDT</b> · {action}
 
 <b>{price_str}</b>
 
@@ -904,14 +904,14 @@ def build_telegram_message(data: dict, bot=None) -> str:
         intervals = data.get("intervals", "")
 
         msg = f"""
-{emoji} <b>{data['symbol']}/USDT</b> · {action}
+{emoji} <b>{data["symbol"]}/USDT</b> · {action}
 
 <b>{price_str}</b>
 {value_str}
 {f"TF: {intervals}" if intervals else ""}
 
 {indicator_emoji} <b>{indicator}</b>
-<i>{data['reason']}</i>
+<i>{data["reason"]}</i>
 
 <code>────────────────────</code>
 🤖 {bot_name}

@@ -642,7 +642,6 @@ class GetBotsList(APIView):
 
 
 class DeleteMyBot(APIView):
-
     permission_classes = [IsAuthenticated]
 
     def delete(self, request, bot_id):
@@ -653,7 +652,6 @@ class DeleteMyBot(APIView):
 
 
 class GetBotsDetail(APIView):
-
     permission_classes = [IsAuthenticated]
 
     def get(self, request, bot_id):
@@ -922,7 +920,6 @@ class GetAvailableBalance(APIView):
 
 
 class GetAllBots(APIView):
-
     permission_classes = [IsAuthenticated]
 
     def get(self):
@@ -974,7 +971,6 @@ def calculate_signal_frequency(cfg):
     frequency_multiplier = 1.0
 
     for ind in enabled_indicators:
-
         if "min" in ind and "max" in ind:
             width = ind["max"] - ind["min"]
             if width < 20:
@@ -1063,7 +1059,6 @@ def calculate_risk_level(cfg, accuracy):
 
 
 class BotMetrics(APIView):
-
     permission_classes = [IsAuthenticated]
 
     def post(self, request, *args, **kwargs):
@@ -1096,7 +1091,6 @@ class BotMetrics(APIView):
 
 
 class CreateBotBalance(APIView):
-
     permission_classes = [IsAuthenticated]
 
     def post(self, request):
@@ -1105,7 +1099,6 @@ class CreateBotBalance(APIView):
         id = data.get("bot", "")
         bot = Bot.objects.get(id=id)
         if not bot.published:
-
             if bot.owner == user:
                 serializer = BotBalanceSerializer(data=data, context={"request": request})
             else:

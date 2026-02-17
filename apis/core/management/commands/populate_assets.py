@@ -16,7 +16,8 @@ def get_top_symbols(limit: int = 50):
 
     # Filter only USDT pairs and sort by quote volume
     usdt_pairs = [
-        t for t in data
+        t
+        for t in data
         if t["symbol"].endswith("USDT")
         and not t["symbol"].endswith("DOWNUSDT")
         and not t["symbol"].endswith("UPUSDT")
@@ -24,20 +25,18 @@ def get_top_symbols(limit: int = 50):
         and "BULL" not in t["symbol"]
     ]
 
-    sorted_pairs = sorted(
-        usdt_pairs,
-        key=lambda x: float(x["quoteVolume"]),
-        reverse=True
-    )
+    sorted_pairs = sorted(usdt_pairs, key=lambda x: float(x["quoteVolume"]), reverse=True)
 
     top_symbols = []
     for pair in sorted_pairs[:limit]:
         symbol = pair["symbol"].replace("USDT", "")
-        top_symbols.append({
-            "symbol": symbol,
-            "binance_symbol": pair["symbol"],
-            "volume_24h": float(pair["quoteVolume"]),
-        })
+        top_symbols.append(
+            {
+                "symbol": symbol,
+                "binance_symbol": pair["symbol"],
+                "volume_24h": float(pair["quoteVolume"]),
+            }
+        )
 
     return top_symbols
 
@@ -82,5 +81,7 @@ class Command(BaseCommand):
                 self.stdout.write(f"  • {s['symbol']} (exists)")
 
         self.stdout.write(
-            self.style.SUCCESS(f"\nDone! Created {created_count} new, {len(symbols) - created_count} existed.")
+            self.style.SUCCESS(
+                f"\nDone! Created {created_count} new, {len(symbols) - created_count} existed."
+            )
         )

@@ -7,7 +7,6 @@ REDIS_URL = "redis://redis:6379/1"
 
 
 class LiquidationConsumer(AsyncWebsocketConsumer):
-
     async def connect(self):
         await self.accept()
 

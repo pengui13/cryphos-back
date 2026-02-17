@@ -15,7 +15,6 @@ r = redis.from_url("redis://redis:6379/1", decode_responses=True)
 
 
 class IndicatorsCalc:
-
     def calculate_rsi(self, prices: list[Decimal], period: int = 14) -> float | None:
         if len(prices) < period + 1:
             return None

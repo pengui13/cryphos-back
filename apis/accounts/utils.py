@@ -18,7 +18,6 @@ def send_verification_code(email: str, code: str):
     subject = "Your Cryphos verification code"
     preheader = "Use this code to finish signing up. It expires in 10 minutes."
 
-
     text = (
         f"{site_name} verification code: {code_str}\n\n"
         "This code expires in 10 minutes. If you didn’t request it, ignore this email."
@@ -120,7 +119,6 @@ def send_reset_code(email: str, code: str):
 
     subject = "Your Cryphos password reset code"
     preheader = "Use this code to reset your password. It expires in 10 minutes."
-
 
     text = (
         f"{site_name} password reset code: {code_str}\n\n"

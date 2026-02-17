@@ -15,7 +15,6 @@ logger = logging.getLogger(__name__)
 
 
 class Command(BaseCommand):
-
     def handle(self, *args, **options):
 
         self.stdout.write("Starting RSI scan...")

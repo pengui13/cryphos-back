@@ -19,7 +19,6 @@ TTL_SECONDS = 86400
 
 
 class LiquidationFetcher:
-
     def __init__(self):
         self.running = False
         self.redis: redis.Redis = None

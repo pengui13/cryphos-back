@@ -247,8 +247,7 @@ def stripe_webhook(request):
             u.save(update_fields=["tg_approved"])
 
         print(
-            f"Updated BillingProfile for user {u.id}: "
-            f"status={bp.status}, is_active={bp.is_active}"
+            f"Updated BillingProfile for user {u.id}: status={bp.status}, is_active={bp.is_active}"
         )
 
     # --- ТИПЫ СОБЫТИЙ ---
@@ -452,7 +451,6 @@ def send_telegram_reset_code(chat_id, code):
 
 
 class ResetStartView(APIView):
-
     permission_classes = [Aa]
 
     def post(self, request):

@@ -40,7 +40,6 @@ class MainBotSettings(models.Model):
 
 
 class Bot(models.Model):
-
     class VerificationStatus(models.TextChoices):
         DRAFT = "draft", "Draft"
         PENDING = "pending", "Pending Review"
@@ -167,7 +166,6 @@ def default_sr_intervals():
 
 
 class SupportResistanceIndicator(BaseIndicator):
-
     MODE_CHOICES = [
         ("rolling", "Rolling High/Low"),
         ("pivots", "Pivot Points"),
@@ -506,7 +504,6 @@ class ObvValue(BaseIndicatorValue):
 
 
 class BotSignal(models.Model):
-
     bot = models.ForeignKey(Bot, on_delete=models.CASCADE, related_name="signals")
     balance = models.ForeignKey(
         BotBalance,

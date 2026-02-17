@@ -17,7 +17,6 @@ class RsiSerializer(serializers.ModelSerializer):
 
 
 class HistQuotesSerializer(serializers.ModelSerializer):
-
     symbol = serializers.CharField(source="symbol.symbol", read_only=True)
 
     class Meta:

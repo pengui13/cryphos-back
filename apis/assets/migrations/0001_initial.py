@@ -5,76 +5,122 @@ from django.db import migrations, models
 
 
 class Migration(migrations.Migration):
-
     initial = True
 
-    dependencies = [
-    ]
+    dependencies = []
 
     operations = [
         migrations.CreateModel(
-            name='AssetCryptoCoin',
+            name="AssetCryptoCoin",
             fields=[
-                ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
-                ('symbol', models.CharField(max_length=60)),
-                ('sector', models.CharField(blank=True, default='', max_length=200, null=True)),
-                ('name', models.CharField(max_length=200)),
-                ('rate', models.DecimalField(blank=True, decimal_places=8, max_digits=15, null=True)),
-                ('rank', models.IntegerField(default=0)),
-                ('icon_url', models.CharField(default='URL', max_length=300)),
-                ('pair', models.CharField(blank=True, default='', max_length=20, null=True)),
-                ('trading_pair', models.CharField(default='', max_length=200)),
-                ('volume', models.DecimalField(decimal_places=2, default=0, max_digits=20)),
-                ('color', models.CharField(default='', max_length=20)),
+                (
+                    "id",
+                    models.BigAutoField(
+                        auto_created=True, primary_key=True, serialize=False, verbose_name="ID"
+                    ),
+                ),
+                ("symbol", models.CharField(max_length=60)),
+                ("sector", models.CharField(blank=True, default="", max_length=200, null=True)),
+                ("name", models.CharField(max_length=200)),
+                (
+                    "rate",
+                    models.DecimalField(blank=True, decimal_places=8, max_digits=15, null=True),
+                ),
+                ("rank", models.IntegerField(default=0)),
+                ("icon_url", models.CharField(default="URL", max_length=300)),
+                ("pair", models.CharField(blank=True, default="", max_length=20, null=True)),
+                ("trading_pair", models.CharField(default="", max_length=200)),
+                ("volume", models.DecimalField(decimal_places=2, default=0, max_digits=20)),
+                ("color", models.CharField(default="", max_length=20)),
             ],
             options={
-                'db_table': 'asset_cryptocoin',
-                'indexes': [models.Index(fields=['symbol', 'name'], name='asset_crypt_symbol_072357_idx')],
+                "db_table": "asset_cryptocoin",
+                "indexes": [
+                    models.Index(fields=["symbol", "name"], name="asset_crypt_symbol_072357_idx")
+                ],
             },
         ),
         migrations.CreateModel(
-            name='HistQuotes',
+            name="HistQuotes",
             fields=[
-                ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
-                ('interval', models.CharField(blank=True, max_length=10, null=True)),
-                ('volume', models.DecimalField(decimal_places=15, max_digits=30)),
-                ('time', models.BigIntegerField(default=1)),
-                ('open_price', models.DecimalField(decimal_places=10, max_digits=20)),
-                ('high_price', models.DecimalField(decimal_places=10, max_digits=20)),
-                ('low_price', models.DecimalField(decimal_places=10, max_digits=20)),
-                ('close_price', models.DecimalField(decimal_places=10, max_digits=20)),
-                ('trade_count', models.DecimalField(blank=True, decimal_places=10, max_digits=20, null=True)),
-                ('symbol', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='hist_quotes', to='assets.assetcryptocoin')),
+                (
+                    "id",
+                    models.BigAutoField(
+                        auto_created=True, primary_key=True, serialize=False, verbose_name="ID"
+                    ),
+                ),
+                ("interval", models.CharField(blank=True, max_length=10, null=True)),
+                ("volume", models.DecimalField(decimal_places=15, max_digits=30)),
+                ("time", models.BigIntegerField(default=1)),
+                ("open_price", models.DecimalField(decimal_places=10, max_digits=20)),
+                ("high_price", models.DecimalField(decimal_places=10, max_digits=20)),
+                ("low_price", models.DecimalField(decimal_places=10, max_digits=20)),
+                ("close_price", models.DecimalField(decimal_places=10, max_digits=20)),
+                (
+                    "trade_count",
+                    models.DecimalField(blank=True, decimal_places=10, max_digits=20, null=True),
+                ),
+                (
+                    "symbol",
+                    models.ForeignKey(
+                        on_delete=django.db.models.deletion.CASCADE,
+                        related_name="hist_quotes",
+                        to="assets.assetcryptocoin",
+                    ),
+                ),
             ],
             options={
-                'db_table': 'quotes_hist',
-                'constraints': [models.UniqueConstraint(fields=('symbol', 'interval', 'time'), name='unique_symbol_interval_time')],
+                "db_table": "quotes_hist",
+                "constraints": [
+                    models.UniqueConstraint(
+                        fields=("symbol", "interval", "time"), name="unique_symbol_interval_time"
+                    )
+                ],
             },
         ),
         migrations.CreateModel(
-            name='Quote',
+            name="Quote",
             fields=[
-                ('id', models.BigAutoField(primary_key=True, serialize=False)),
-                ('interval', models.CharField(blank=True, max_length=10, null=True)),
-                ('bid', models.DecimalField(decimal_places=8, max_digits=20)),
-                ('ask', models.DecimalField(decimal_places=8, max_digits=20)),
-                ('lp', models.DecimalField(blank=True, decimal_places=8, default=0, max_digits=20, null=True)),
-                ('volume', models.DecimalField(decimal_places=8, max_digits=20)),
-                ('open_price', models.DecimalField(decimal_places=10, max_digits=20)),
-                ('high_price', models.DecimalField(decimal_places=10, max_digits=20)),
-                ('low_price', models.DecimalField(decimal_places=10, max_digits=20)),
-                ('prev_close_price', models.DecimalField(blank=True, decimal_places=10, max_digits=20, null=True)),
-                ('max_24h', models.DecimalField(blank=True, decimal_places=10, max_digits=20, null=True)),
-                ('min_24h', models.DecimalField(blank=True, decimal_places=10, max_digits=20, null=True)),
-                ('is_closed', models.BooleanField(default=False)),
-                ('time', models.DateTimeField(auto_now_add=True)),
-                ('perc_24', models.FloatField(default=0)),
-                ('value_in_usd', models.DecimalField(decimal_places=8, default=0, max_digits=20)),
-                ('symbol', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, to='assets.assetcryptocoin')),
+                ("id", models.BigAutoField(primary_key=True, serialize=False)),
+                ("interval", models.CharField(blank=True, max_length=10, null=True)),
+                ("bid", models.DecimalField(decimal_places=8, max_digits=20)),
+                ("ask", models.DecimalField(decimal_places=8, max_digits=20)),
+                (
+                    "lp",
+                    models.DecimalField(
+                        blank=True, decimal_places=8, default=0, max_digits=20, null=True
+                    ),
+                ),
+                ("volume", models.DecimalField(decimal_places=8, max_digits=20)),
+                ("open_price", models.DecimalField(decimal_places=10, max_digits=20)),
+                ("high_price", models.DecimalField(decimal_places=10, max_digits=20)),
+                ("low_price", models.DecimalField(decimal_places=10, max_digits=20)),
+                (
+                    "prev_close_price",
+                    models.DecimalField(blank=True, decimal_places=10, max_digits=20, null=True),
+                ),
+                (
+                    "max_24h",
+                    models.DecimalField(blank=True, decimal_places=10, max_digits=20, null=True),
+                ),
+                (
+                    "min_24h",
+                    models.DecimalField(blank=True, decimal_places=10, max_digits=20, null=True),
+                ),
+                ("is_closed", models.BooleanField(default=False)),
+                ("time", models.DateTimeField(auto_now_add=True)),
+                ("perc_24", models.FloatField(default=0)),
+                ("value_in_usd", models.DecimalField(decimal_places=8, default=0, max_digits=20)),
+                (
+                    "symbol",
+                    models.ForeignKey(
+                        on_delete=django.db.models.deletion.CASCADE, to="assets.assetcryptocoin"
+                    ),
+                ),
             ],
             options={
-                'db_table': 'quotes',
-                'unique_together': {('symbol', 'interval')},
+                "db_table": "quotes",
+                "unique_together": {("symbol", "interval")},
             },
         ),
     ]
