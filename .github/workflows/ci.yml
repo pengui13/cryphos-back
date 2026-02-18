@@ -22,10 +22,10 @@ jobs:
         run: uv sync --all-groups
 
       - name: Ruff lint
-        run: uv run ruff check .
+        run: uv run ruff check . --output-format github
 
       - name: Ruff format check
-        run: uv run ruff format --check .
+        run: uv run ruff format --check . --output-format github
 
       - name: ty type check
         run: uv run ty check
