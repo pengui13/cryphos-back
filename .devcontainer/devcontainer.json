@@ -2,7 +2,7 @@
     "name": "Cryphos Dev",
     "dockerComposeFile": "../docker-compose.yaml",
     "service": "backend",
-    "workspaceFolder": "/workspace",
+    "workspaceFolder": "/app",
     "postCreateCommand": "uv sync",
     "customizations": {
         "vscode": {
