@@ -59,7 +59,7 @@ dependencies = [
     "djangorestframework_simplejwt==5.5.1",
     "drf-spectacular==0.29.0",
     "pandas",
-    "ta",              # replaces pandas-ta, no numba/llvmlite
+    "pandas-ta",
     "psycopg[binary,pool]",
     "python-telegram-bot",
     "redis==7.1.0",
