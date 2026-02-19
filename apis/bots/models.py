@@ -335,7 +335,7 @@ class FiboIndicator(BaseIndicator):
         ("78.6", "78.6%"),
         ("100", "100%"),
     ]
-    bot = models.ForeignKey(Bot, related_name="rsi_indicators", on_delete=models.CASCADE)
+    bot = models.ForeignKey(Bot, related_name="fibo_indicators", on_delete=models.CASCADE)
     period = models.IntegerField(default = 50)
     levels = ArrayField(
         models.DecimalField(max_digits=5, decimal_places=1),
