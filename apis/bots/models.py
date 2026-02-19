@@ -102,7 +102,7 @@ class Bot(models.Model):
         return 0
 
     def __str__(self):
-        return f"{self.bot.owner.email}|"
+        return f"{self.owner.email}"
 
 
 class RiskSettings(models.Model):
