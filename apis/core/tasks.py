@@ -321,6 +321,11 @@ def interval_to_sec(period: str) -> int:
 
     return INTERVAL_SEC[period] + 20
 
+# @shared_task
+# def calculate_swing():
+#     assets = AssetCryptoCoin.objects.prefetch_related('bots')
+#     for asset in assets.bo
+        
 
 def calculate_rsi_signal(asset, bot, calc) -> dict | None:
     rsi_indicator = bot.rsi_indicators.first()

@@ -8,6 +8,7 @@ from .models import (
     BotBalance,
     BotStat,
     EmaIndicator,
+    FiboIndicator,
     FundingRate,
     MacdIndicator,
     MainBotSettings,
@@ -18,9 +19,11 @@ from .models import (
     Signal,
     SupportResistanceIndicator,
 )
+from decimal import Decimal
 
 ALLOWED_TFS = {"1MIN", "5MIN", "15MIN", "30MIN", "1HRS", "1DAY"}
 
+    
 
 class FundingRateSerializer(serializers.ModelSerializer):
     asset = serializers.SerializerMethodField()
@@ -90,6 +93,7 @@ class BotSerializer(serializers.ModelSerializer):
             "runtime",
             "last_heartbeat",
             "id",
+            'fibo'
         ]
         read_only_fields = [
             "created_at",
@@ -104,6 +108,8 @@ class BotSerializer(serializers.ModelSerializer):
             "runtime",
             "last_heartbeat",
             "id",
+            'fibo'
+            
         ]
 
     def create(self, validated_data):
@@ -172,6 +178,33 @@ class ObvIndicatorSerializer(serializers.ModelSerializer):
         validated_data["bot"] = bot
         return super().create(validated_data)
 
+class FiboSerializer(serializers.ModelSerializer):
+    
+    VALID_LEVELS = [
+        Decimal("0"),
+        Decimal("23.6"),
+        Decimal("38.2"),
+        Decimal("50"),
+        Decimal("61.8"),
+        Decimal("78.6"),
+        Decimal("100"),
+    ]
+
+    class Meta:
+        model = FiboIndicator
+        fields = ["intervals", "period", "levels"]
+        
+    def validate_levels(self, values):
+        for value in values:
+            if value not in self.VALID_LEVELS:
+                raise serializers.ValidationError(f"{value} is not a valid Fibonacci level")
+        return values  
+        
+    def create(self, validated_data):
+        bot = self.context['bot']
+        validated_data['bot'] = bot
+        return super().create(validated_data)
+        
 
 class MainBotSerializer(serializers.ModelSerializer):
     class Meta:

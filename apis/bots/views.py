@@ -37,6 +37,7 @@ from .serializers import (
     RsiIndicatorSerializer,
     SignalSerializer,
     SupportResistanceIndicatorSerializer,
+    FiboSerializer
 )
 
 REDIS_URL = "redis://redis:6379/1"
@@ -121,6 +122,8 @@ serializer_classes = {
     "sr": SupportResistanceIndicatorSerializer,
     "ema": EmaIndicatorSerializer,
     "ma": MaIndicatorSerializer,
+    "fibo": FiboSerializer,
+
 }
 
 

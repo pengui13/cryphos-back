@@ -55,7 +55,6 @@ class IndicatorsCalc:
 
         quotes_to_analyze = quotes[:lookback]
 
-        # Find local highs and lows
         levels = []
 
         for i in range(1, len(quotes_to_analyze) - 1):
@@ -63,11 +62,9 @@ class IndicatorsCalc:
             prev = float(quotes_to_analyze[i - 1].high_price)
             next_q = float(quotes_to_analyze[i + 1].high_price)
 
-            # Local high
             if current > prev and current > next_q:
                 levels.append(current)
 
-            # Local low
             current_low = float(quotes_to_analyze[i].low_price)
             prev_low = float(quotes_to_analyze[i - 1].low_price)
             next_low = float(quotes_to_analyze[i + 1].low_price)
@@ -78,10 +75,8 @@ class IndicatorsCalc:
         if not levels:
             return None
 
-        # Cluster similar levels (within 0.5% of each other)
         clustered_levels = self._cluster_levels(levels, threshold=0.005)
 
-        # Sort and return top N levels
         clustered_levels.sort()
 
         return clustered_levels[:num_levels]
@@ -108,15 +103,12 @@ class IndicatorsCalc:
             current_level = sorted_levels[i]
             cluster_avg = sum(current_cluster) / len(current_cluster)
 
-            # Check if current level is within threshold of cluster average
             if abs(current_level - cluster_avg) / cluster_avg <= threshold:
                 current_cluster.append(current_level)
             else:
-                # Save current cluster and start new one
                 clusters.append(sum(current_cluster) / len(current_cluster))
                 current_cluster = [current_level]
 
-        # Don't forget the last cluster
         if current_cluster:
             clusters.append(sum(current_cluster) / len(current_cluster))
 
