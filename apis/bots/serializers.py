@@ -50,6 +50,8 @@ class BotSerializer(serializers.ModelSerializer):
     sr = serializers.SerializerMethodField()
     ema = serializers.SerializerMethodField()
     ma = serializers.SerializerMethodField()
+    fib = serializers.SerializerMethodField()
+
 
     def get_rsi(self, obj):
         ind = obj.rsi_indicators.first()
@@ -63,6 +65,10 @@ class BotSerializer(serializers.ModelSerializer):
         ind = obj.ma_indicators.first()
         return MaIndicatorSerializer(ind).data if ind else None
 
+    def get_fib(self, obj):
+        ind = obj.fibo_indicators.first()
+        return FiboSerializer(ind).data if ind else None
+    
     def get_ema(self, obj):
         ind = obj.ema_indicators.first()
         return EmaIndicatorSerializer(ind).data if ind else None
