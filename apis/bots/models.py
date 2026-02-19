@@ -146,7 +146,7 @@ class BaseIndicator(models.Model):
     class Meta:
         abstract = True
 
- 
+
 
 
 class RsiIndicator(BaseIndicator):
@@ -158,7 +158,7 @@ class RsiIndicator(BaseIndicator):
     class Meta:
         verbose_name = "RSI Indicator"
         verbose_name_plural = "RSI Indicators"
-        
+
     def __str__(self):
         return f"{self.bot.owner.email}|min={self.min}|max={self.max}|period={self.period}|intervals={[f"{interval}|" for interval in self.intervals]}"
 
@@ -420,7 +420,7 @@ class RsiValue(BaseIndicatorValue):
         verbose_name = "RSI Value"
         verbose_name_plural = "RSI Values"
 
-    
+
 
 class MaValue(BaseIndicatorValue):
     value = models.DecimalField(max_digits=20, decimal_places=10)

@@ -2,6 +2,9 @@ FROM python:3.12-slim
 
 ENV PYTHONDONTWRITEBYTECODE=1
 ENV PYTHONUNBUFFERED=1
+ENV UV_PYTHON_PREFERENCE=only-system
+ENV VIRTUAL_ENV=/opt/venv
+ENV PATH="/opt/venv/bin:${PATH}"
 
 WORKDIR /app
 
@@ -11,12 +14,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 
 COPY --from=ghcr.io/astral-sh/uv:latest /uv /usr/local/bin/uv
 
-COPY requirements.txt .
-
-RUN uv venv /app/.venv && \
-  uv pip install --python /app/.venv/bin/python -r requirements.txt
-
-ENV VIRTUAL_ENV=/app/.venv
-ENV PATH="/app/.venv/bin:${PATH}"
+COPY pyproject.toml .
+RUN uv venv /opt/venv && uv pip install --python /opt/venv/bin/python -e .
 
 COPY . .

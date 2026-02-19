@@ -1,6 +1,6 @@
 [tool.ruff]
 line-length=100
-target-version="py313"
+target-version="py312"
 
 [tool.ruff.lint]
 select = [
@@ -29,6 +29,9 @@ known-first-party = ["apis", "config"]
 extra-paths = ["apis"]
 python-platform = "linux"
 
+[tool.uv]
+python-preference = "only-system"
+
 [tool.ty.rules]
 unresolved-attribute = "ignore"
 
@@ -46,7 +49,7 @@ dev = [
 [project]
 name = "cryphos-back"
 version = "0.1.0"
-requires-python = ">=3.13"
+requires-python = ">=3.12"
 dependencies = [
     "celery==5.6.2",
     "Django==6.0.2",
@@ -56,7 +59,7 @@ dependencies = [
     "djangorestframework_simplejwt==5.5.1",
     "drf-spectacular==0.29.0",
     "pandas",
-    "pandas-ta",
+    "ta",              # replaces pandas-ta, no numba/llvmlite
     "psycopg[binary,pool]",
     "python-telegram-bot",
     "redis==7.1.0",

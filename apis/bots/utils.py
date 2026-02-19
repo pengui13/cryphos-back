@@ -6,8 +6,8 @@ import logging
 from decimal import Decimal
 
 import pandas as pd
-import pandas_ta as ta
 import redis
+import ta
 
 logger = logging.getLogger(__name__)
 
