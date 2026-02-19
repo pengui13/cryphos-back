@@ -1,18 +1,19 @@
 from django.urls import path
+
 from .views import (
-    RegisterView,
-    create_checkout_session,
-    stripe_webhook,
-    billing_me,
-    RegisterStartView,
-    RegisterResendView,
     GetUserTelegram,
-    RegisterVerifyView,
     LoginView,
     RefreshTokenView,
+    RegisterResendView,
+    RegisterStartView,
+    RegisterVerifyView,
+    RegisterView,
     ResetStartView,
     ResetVerifyView,
+    billing_me,
     create_billing_portal_session,
+    create_checkout_session,
+    stripe_webhook,
 )
 
 urlpatterns = [

@@ -1,9 +1,10 @@
 import asyncio
 import json
 import time
+from collections.abc import Iterable
+
 import redis.asyncio as redis
 import websockets
-from typing import Iterable
 
 BINANCE_COMBINED = "wss://stream.binance.com:9443/stream?streams="
 

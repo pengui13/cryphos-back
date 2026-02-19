@@ -1,11 +1,12 @@
-from django.db import models
+from datetime import timedelta
+
+from assets.models import AssetCryptoCoin
 from django.conf import settings
 from django.contrib.postgres.fields import ArrayField
-from django.utils import timezone
-from datetime import timedelta
 from django.core.exceptions import ValidationError
-from assets.models import AssetCryptoCoin
-from django.core.validators import MinValueValidator, MaxValueValidator
+from django.core.validators import MaxValueValidator, MinValueValidator
+from django.db import models
+from django.utils import timezone
 
 User = settings.AUTH_USER_MODEL
 
@@ -39,7 +40,6 @@ class MainBotSettings(models.Model):
 
 
 class Bot(models.Model):
-
     class VerificationStatus(models.TextChoices):
         DRAFT = "draft", "Draft"
         PENDING = "pending", "Pending Review"
@@ -87,9 +87,6 @@ class Bot(models.Model):
         if self.is_active and self.last_activated:
             now = timezone.now()
             session_runtime = int((now - self.last_activated).total_seconds())
-
-            today = now.date().isoformat()
-
             self.runtime += session_runtime
             self.is_active = False
             self.last_activated = None
@@ -105,7 +102,7 @@ class Bot(models.Model):
         return 0
 
     def __str__(self):
-        return self.name
+        return f"{self.bot.owner.email}|"
 
 
 class RiskSettings(models.Model):
@@ -149,9 +146,6 @@ class BaseIndicator(models.Model):
     class Meta:
         abstract = True
 
-    def __str__(self):
-        return f"{self.__class__.__name__}: {self.intervals}"
-
 
 class RsiIndicator(BaseIndicator):
     bot = models.ForeignKey(Bot, related_name="rsi_indicators", on_delete=models.CASCADE)
@@ -163,13 +157,15 @@ class RsiIndicator(BaseIndicator):
         verbose_name = "RSI Indicator"
         verbose_name_plural = "RSI Indicators"
 
+    def __str__(self):
+        return f"{self.bot.owner.email}|min={self.min}|max={self.max}|period={self.period}|intervals={[f'{interval}|' for interval in self.intervals]}"
+
 
 def default_sr_intervals():
     return ["5m", "15m", "1h"]
 
 
 class SupportResistanceIndicator(BaseIndicator):
-
     MODE_CHOICES = [
         ("rolling", "Rolling High/Low"),
         ("pivots", "Pivot Points"),
@@ -264,7 +260,7 @@ class SupportResistanceIndicator(BaseIndicator):
         verbose_name_plural = "Support/Resistance Indicators"
 
     def __str__(self):
-        return f"S/R for bot #{self.bot_id} ({self.mode}, n={self.lookback})"
+        return f"S/R for bot #{self.bot.owner.email}|{self.mode} | n={self.lookback})"
 
     def uses_rolling(self) -> bool:
         return self.mode in ("rolling", "both")
@@ -290,6 +286,9 @@ class MaIndicator(BaseIndicator):
     class Meta:
         verbose_name = "Moving Average Indicator"
         verbose_name_plural = "Moving Average Indicators"
+
+    def __str__(self):
+        return f"{self.bot.owner.email}|period={self.period}|intervals={[f'{interval}|' for interval in self.intervals]}"
 
     def clean(self):
         if not (0 <= self.lower <= 100 and 0 <= self.upper <= 100):
@@ -350,7 +349,7 @@ class Signal(models.Model):
     def __str__(self):
         direction = "LONG" if self.is_long else "SHORT"
         status = "OPEN" if self.is_open else "CLOSED"
-        return f"{self.bot.name} - {self.asset.symbol} - {direction} - {status}"
+        return f"{self.bot.owner.email}|{self.asset.symbol}|{direction}|{status}"
 
 
 class BollingerBandsIndicator(BaseIndicator):
@@ -363,6 +362,9 @@ class BollingerBandsIndicator(BaseIndicator):
     class Meta:
         verbose_name = "Bollinger Bands Indicator"
         verbose_name_plural = "Bollinger Bands Indicators"
+
+    def __str__(self):
+        return f"{self.bot.owner.email}|period={self.period}|std_dev={self.std_dev}|intervals={[f'{interval}|' for interval in self.intervals]}"
 
 
 class FundingRate(models.Model):
@@ -508,7 +510,6 @@ class ObvValue(BaseIndicatorValue):
 
 
 class BotSignal(models.Model):
-
     bot = models.ForeignKey(Bot, on_delete=models.CASCADE, related_name="signals")
     balance = models.ForeignKey(
         BotBalance,

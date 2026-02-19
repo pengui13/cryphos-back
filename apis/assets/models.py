@@ -20,7 +20,7 @@ class AssetCryptoCoin(models.Model):
         ]
 
     def __str__(self):
-        return "{} {} {}".format(self.symbol, self.name, self.rate)
+        return f"{self.symbol} {self.name} {self.rate}"
 
     def get_usdt_rate(self):
         return self.rate

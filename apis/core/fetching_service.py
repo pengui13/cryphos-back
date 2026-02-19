@@ -2,7 +2,6 @@ import requests
 
 
 class FetchingService:
-
     URL = "https://api.binance.com/api/v3/klines"
 
     def __init__(self, symbol: str, interval: str, limit: int = 2):

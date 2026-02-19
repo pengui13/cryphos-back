@@ -1,4 +1,5 @@
 from django.contrib import admin
+
 from .models import AssetCryptoCoin, HistQuotes, Quote
 
 # Register your models here.

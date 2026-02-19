@@ -1,28 +1,30 @@
 import random
+
+import requests
+import stripe
+from bots.models import Bot
+from django.conf import settings
+from django.contrib.auth import get_user_model
+from django.utils import timezone
 from rest_framework import generics, status
+from rest_framework.decorators import api_view, authentication_classes, permission_classes
+from rest_framework.generics import RetrieveAPIView
+from rest_framework.permissions import AllowAny as Aa
+from rest_framework.permissions import IsAuthenticated as Ia
 from rest_framework.response import Response
 from rest_framework.views import APIView
+from rest_framework_simplejwt.serializers import TokenRefreshSerializer
 from rest_framework_simplejwt.tokens import RefreshToken
-import requests
+from rest_framework_simplejwt.views import TokenRefreshView
+
+from .models import BillingProfile, PasswordResetCode
 from .serializers import (
-    RegisterStartSerializer,
     LoginSerializer,
-    RegisterVerifySerializer,
     RegisterResendSerializer,
+    RegisterStartSerializer,
+    RegisterVerifySerializer,
     UserSerializer,
 )
-from rest_framework_simplejwt.views import TokenRefreshView
-from rest_framework_simplejwt.serializers import TokenRefreshSerializer
-import stripe
-from rest_framework.decorators import api_view, permission_classes, authentication_classes
-from rest_framework.permissions import IsAuthenticated as Ia
-from rest_framework.permissions import AllowAny as Aa
-from bots.models import Bot
-from .models import BillingProfile, PasswordResetCode
-from django.conf import settings
-from django.utils import timezone
-from django.contrib.auth import get_user_model
-from rest_framework.generics import RetrieveAPIView
 
 User = get_user_model()
 stripe.api_key = settings.STRIPE_SECRET_KEY
@@ -245,8 +247,7 @@ def stripe_webhook(request):
             u.save(update_fields=["tg_approved"])
 
         print(
-            f"Updated BillingProfile for user {u.id}: "
-            f"status={bp.status}, is_active={bp.is_active}"
+            f"Updated BillingProfile for user {u.id}: status={bp.status}, is_active={bp.is_active}"
         )
 
     # --- ТИПЫ СОБЫТИЙ ---
@@ -450,7 +451,6 @@ def send_telegram_reset_code(chat_id, code):
 
 
 class ResetStartView(APIView):
-
     permission_classes = [Aa]
 
     def post(self, request):

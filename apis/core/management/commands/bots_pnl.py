@@ -1,13 +1,10 @@
+import logging
+from decimal import Decimal
+
+from assets.models import Quote
+from bots.models import BotBalance, BotSignal
 from django.core.management.base import BaseCommand
 from django.db import transaction
-from django.db.models import Sum
-from decimal import Decimal
-import time
-import logging
-
-from assets.models import Quote, AssetCryptoCoin
-from bots.models import BotSignal, BotBalance
-from django.utils.translation import gettext as _, override
 
 logger = logging.getLogger(__name__)
 
@@ -123,7 +120,6 @@ class Command(BaseCommand):
     def handle(self, *args, **options):
         self.stdout.write("Starting position update loop")
         try:
-
             try:
                 self.quote_update()
             except Exception as e:

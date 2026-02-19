@@ -1,6 +1,6 @@
-from django.db.models import Exists, OuterRef
-from django.db import transaction
 from assets.models import HistQuotes
+from django.db import transaction
+from django.db.models import Exists, OuterRef
 
 mapping = {
     "1m": "1MIN",

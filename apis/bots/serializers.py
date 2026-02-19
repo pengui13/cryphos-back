@@ -1,22 +1,23 @@
-from rest_framework import serializers
-from .models import (
-    ObvIndicator,
-    Bot,
-    RsiIndicator,
-    MacdIndicator,
-    MaIndicator,
-    BollingerBandsIndicator,
-    AtrIndicator,
-    MainBotSettings,
-    BotStat,
-    SupportResistanceIndicator,
-    Signal,
-    BotBalance,
-    RiskSettings,
-    FundingRate,
-    EmaIndicator,
-)
 from assets.models import AssetCryptoCoin
+from rest_framework import serializers
+
+from .models import (
+    AtrIndicator,
+    BollingerBandsIndicator,
+    Bot,
+    BotBalance,
+    BotStat,
+    EmaIndicator,
+    FundingRate,
+    MacdIndicator,
+    MainBotSettings,
+    MaIndicator,
+    ObvIndicator,
+    RiskSettings,
+    RsiIndicator,
+    Signal,
+    SupportResistanceIndicator,
+)
 
 ALLOWED_TFS = {"1MIN", "5MIN", "15MIN", "30MIN", "1HRS", "1DAY"}
 

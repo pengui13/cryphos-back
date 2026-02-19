@@ -1,8 +1,8 @@
 import time
-import requests
-from django.core.management.base import BaseCommand
 
-from assets.models import HistQuotes, AssetCryptoCoin
+import requests
+from assets.models import AssetCryptoCoin, HistQuotes
+from django.core.management.base import BaseCommand
 
 BINANCE_BASE_URL = "https://api.binance.com"
 
@@ -144,6 +144,6 @@ class Command(BaseCommand):
         # Summary
         self.stdout.write("\n" + "=" * 40)
         self.stdout.write(self.style.SUCCESS(f"Done! Saved {total_saved} total candles"))
-        
+
         if failed_assets:
             self.stdout.write(self.style.WARNING(f"Failed assets: {', '.join(failed_assets)}"))

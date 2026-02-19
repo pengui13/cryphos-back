@@ -1,6 +1,9 @@
+import html
+
 from django.conf import settings
 from django.core.mail import EmailMultiAlternatives
-import html
+
+BG_URL = "https://cryphos.com/bg.png"
 
 
 def send_verification_code(email: str, code: str):
@@ -14,8 +17,6 @@ def send_verification_code(email: str, code: str):
 
     subject = "Your Cryphos verification code"
     preheader = "Use this code to finish signing up. It expires in 10 minutes."
-
-    BG_URL = "https://cryphos.com/bg.png"
 
     text = (
         f"{site_name} verification code: {code_str}\n\n"
@@ -119,15 +120,11 @@ def send_reset_code(email: str, code: str):
     subject = "Your Cryphos password reset code"
     preheader = "Use this code to reset your password. It expires in 10 minutes."
 
-    BG_URL = "https://cryphos.com/bg.png"
-
-    # Plain text fallback
     text = (
         f"{site_name} password reset code: {code_str}\n\n"
         "This code expires in 10 minutes. If you didn’t request it, ignore this email."
     )
 
-    # HTML template
     html_message = f"""\
 <!doctype html>
 <html>

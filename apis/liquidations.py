@@ -1,11 +1,13 @@
-import websockets
 import asyncio
-import redis.asyncio as redis
-from datetime import datetime, timezone
 import json
+from datetime import UTC, datetime
+
+import redis.asyncio as redis
+import websockets
 
 OKX_URL = "wss://ws.okx.com:8443/ws/v5/public"
 REDIS_URL = "redis://redis:6379/1"
+
 
 BUCKET_SIZES = {
     "BTCUSDT": 100,
@@ -17,7 +19,6 @@ TTL_SECONDS = 86400
 
 
 class LiquidationFetcher:
-
     def __init__(self):
         self.running = False
         self.redis: redis.Redis = None
@@ -58,22 +59,23 @@ class LiquidationFetcher:
             try:
                 await ws.send("ping")
                 await asyncio.sleep(20)
-            except:
+            except Exception as e:
+                print(e)
                 break
 
-    async def _handle_message(self, message: str):
+    async def _handle_message(self, message: str | bytes):
         if message == "pong":
             return
 
         try:
             data = json.loads(message)
-        except:
+        except Exception as e:
+            print(e)
             return
 
         if "data" not in data:
             return
 
-        # OKX format: data[].instId + data[].details[]
         for item in data.get("data", []):
             inst_id = item.get("instId", "")
             for detail in item.get("details", []):
@@ -84,7 +86,6 @@ class LiquidationFetcher:
         size = float(detail.get("sz", 0))
         price = float(detail.get("bkPx", 0))
 
-        # Convert instId: "DOGE-USDT-SWAP" -> "DOGEUSDT"
         symbol = inst_id.replace("-SWAP", "").replace("-", "")
 
         usd_value = size * price
@@ -96,7 +97,7 @@ class LiquidationFetcher:
             "price": price,
             "qty": size,
             "usd": usd_value,
-            "ts": datetime.now(timezone.utc).isoformat(),
+            "ts": datetime.now(UTC).isoformat(),
             "exchange": "okx",
         }
 

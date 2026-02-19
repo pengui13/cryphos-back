@@ -1,21 +1,21 @@
 from django.contrib import admin
+
 from .models import (
-    Bot,
-    FundingRate,
     BollingerBandsIndicator,
-    SupportResistanceIndicator,
+    Bot,
+    BotBalance,
+    BotSignal,
+    EmaIndicator,
     FnGValue,
-    UserBalance,
+    FundingRate,
+    MaIndicator,
+    RsiIndicator,
     RsiValue,
     Signal,
-    RsiIndicator,
-    BotSignal,
-    BotBalance,
-    EmaIndicator,
-    MaIndicator,
+    SupportResistanceIndicator,
+    UserBalance,
 )
 
-# Register your models here.
 admin.site.register(Bot)
 admin.site.register(UserBalance)
 admin.site.register(BotSignal)
