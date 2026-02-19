@@ -4,7 +4,7 @@ from decimal import Decimal
 import redis
 import requests
 from assets.models import AssetCryptoCoin, HistQuotes
-from bots.models import FundingRate, RiskSettings, Signal
+from bots.models import FundingRate, RiskSettings, Signal, Bot
 from bots.utils import IndicatorsCalc
 from celery import shared_task
 from django.conf import settings
@@ -16,7 +16,6 @@ from core.fetching_service import FetchingService
 
 User = get_user_model()
 logger = logging.getLogger(__name__)
-
 CRYPHOS_URL = "https://cryphos.com"
 FUNDING_URL = "https://fapi.binance.com/fapi/v1/fundingRate"
 FNG_URL = "https://api.alternative.me/fng/"
@@ -25,6 +24,33 @@ CRYPHOS_LABEL = "Cryphos"
 INTERVAL_SEC = {"1MIN": 60, "5MIN": 300, "15MIN": 900, "30MIN": 1800, "1HRS": 3600}
 
 r = redis.from_url("redis://redis:6379/1", decode_responses=True)
+
+
+@shared_task
+def calculate_swing():
+    bots = Bot.objects.prefetch_related('fibo_indicators', 'bot_assets')
+    for bot in bots:
+        fibo = bot.fibo_indicators.first()
+        if not fibo:
+            continue
+        assets = bot.bot_assets.all()
+        for interval in fibo.intervals:
+            for asset in assets:
+                last_price = r.hget("prices:last", asset.symbol)
+                if last_price is None:
+                    continue
+                last_price = Decimal(last_price.decode() if isinstance(last_price, (bytes, bytearray)) else last_price)
+                qs = HistQuotes.objects.filter(symbol = asset, interval = interval).order_by('-time').values_list('close_price', flat=True)[:fibo.period]
+                closes = list(qs)
+                if not closes:
+                    continue
+                series = list(reversed(closes)) + [last_price]
+                high, low = max(series), min(series)
+                up_trend = series.index(high) > series.index(low)
+                prefix = f"{interval}:{asset.symbol}"
+                r.hset("up_trend", prefix, int(up_trend))
+                r.hset("high", prefix, str(high))
+                r.hset("low", prefix, str(low))
 
 
 @shared_task
@@ -321,11 +347,6 @@ def interval_to_sec(period: str) -> int:
 
     return INTERVAL_SEC[period] + 20
 
-# @shared_task
-# def calculate_swing():
-#     assets = AssetCryptoCoin.objects.prefetch_related('bots')
-#     for asset in assets.bo
-        
 
 def calculate_rsi_signal(asset, bot, calc) -> dict | None:
     rsi_indicator = bot.rsi_indicators.first()

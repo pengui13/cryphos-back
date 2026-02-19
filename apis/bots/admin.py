@@ -1,5 +1,4 @@
 from django.contrib import admin
-
 from .models import (
     BollingerBandsIndicator,
     Bot,
@@ -16,8 +15,6 @@ from .models import (
     UserBalance,
     FiboIndicator
 )
-
-
 admin.site.register(Bot)
 admin.site.register(UserBalance)
 admin.site.register(BotSignal)
@@ -31,5 +28,4 @@ admin.site.register(FiboIndicator)
 admin.site.register(RsiValue)
 admin.site.register(RsiIndicator)
 admin.site.register(BollingerBandsIndicator)
-
 admin.site.register(SupportResistanceIndicator)
