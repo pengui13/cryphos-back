@@ -93,7 +93,7 @@ class BotSerializer(serializers.ModelSerializer):
             "runtime",
             "last_heartbeat",
             "id",
-            'fibo'
+            'fib'
         ]
         read_only_fields = [
             "created_at",
@@ -108,7 +108,7 @@ class BotSerializer(serializers.ModelSerializer):
             "runtime",
             "last_heartbeat",
             "id",
-            'fibo'
+            'fib'
             
         ]
 
