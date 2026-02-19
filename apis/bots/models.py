@@ -102,7 +102,7 @@ class Bot(models.Model):
         return 0
 
     def __str__(self):
-        return self.name
+        return f"{self.bot.owner.email}|"
 
 
 class RiskSettings(models.Model):
@@ -146,8 +146,7 @@ class BaseIndicator(models.Model):
     class Meta:
         abstract = True
 
-    def __str__(self):
-        return f"{self.__class__.__name__}: {self.intervals}"
+ 
 
 
 class RsiIndicator(BaseIndicator):
@@ -159,7 +158,9 @@ class RsiIndicator(BaseIndicator):
     class Meta:
         verbose_name = "RSI Indicator"
         verbose_name_plural = "RSI Indicators"
-
+        
+    def __str__(self):
+        return f"{self.bot.owner.email}|min={self.min}|max={self.max}|period={self.period}|intervals={[f"{interval}|" for interval in self.intervals]}"
 
 def default_sr_intervals():
     return ["5m", "15m", "1h"]
@@ -260,7 +261,7 @@ class SupportResistanceIndicator(BaseIndicator):
         verbose_name_plural = "Support/Resistance Indicators"
 
     def __str__(self):
-        return f"S/R for bot #{self.bot_id} ({self.mode}, n={self.lookback})"
+        return f"S/R for bot #{self.bot.owner.email}|{self.mode} | n={self.lookback})"
 
     def uses_rolling(self) -> bool:
         return self.mode in ("rolling", "both")
@@ -286,6 +287,8 @@ class MaIndicator(BaseIndicator):
     class Meta:
         verbose_name = "Moving Average Indicator"
         verbose_name_plural = "Moving Average Indicators"
+    def __str__(self):
+        return f"{self.bot.owner.email}|period={self.period}|intervals={[f"{interval}|" for interval in self.intervals]}"
 
     def clean(self):
         if not (0 <= self.lower <= 100 and 0 <= self.upper <= 100):
@@ -346,7 +349,7 @@ class Signal(models.Model):
     def __str__(self):
         direction = "LONG" if self.is_long else "SHORT"
         status = "OPEN" if self.is_open else "CLOSED"
-        return f"{self.bot.name} - {self.asset.symbol} - {direction} - {status}"
+        return f"{self.bot.owner.email}|{self.asset.symbol}|{direction}|{status}"
 
 
 class BollingerBandsIndicator(BaseIndicator):
@@ -360,6 +363,8 @@ class BollingerBandsIndicator(BaseIndicator):
         verbose_name = "Bollinger Bands Indicator"
         verbose_name_plural = "Bollinger Bands Indicators"
 
+    def __str__(self):
+        return f"{self.bot.owner.email}|period={self.period}|std_dev={self.std_dev}|intervals={[f"{interval}|" for interval in self.intervals]}"
 
 class FundingRate(models.Model):
     asset = models.ForeignKey(AssetCryptoCoin, on_delete=models.CASCADE)
@@ -415,6 +420,7 @@ class RsiValue(BaseIndicatorValue):
         verbose_name = "RSI Value"
         verbose_name_plural = "RSI Values"
 
+    
 
 class MaValue(BaseIndicatorValue):
     value = models.DecimalField(max_digits=20, decimal_places=10)
