@@ -341,6 +341,7 @@ class FiboIndicator(BaseIndicator):
         models.DecimalField(max_digits=5, decimal_places=1),
         default=list,
     )
+    
     def __str__(self):
         return f"{self.period}|{[f"{level}|" for level in self.levels]}"
     

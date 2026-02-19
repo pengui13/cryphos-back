@@ -122,7 +122,7 @@ serializer_classes = {
     "sr": SupportResistanceIndicatorSerializer,
     "ema": EmaIndicatorSerializer,
     "ma": MaIndicatorSerializer,
-    "fibo": FiboSerializer,
+    "fib": FiboSerializer,
 
 }
 
