@@ -698,7 +698,10 @@ def calculate_fibo_signal(asset, bot):
     signals_found = []
     for interval in fibo_indicator.intervals:
         prev_close = HistQuotes.objects.filter(symbol = asset, interval = interval).order_by('-time').first().close_price
-        curr_close = Decimal(r.hget("prices:last", asset.symbol))
+        close = r.hget("prices:last", asset.symbol)
+        if not close:
+            continue
+        curr_close = Decimal(close) 
         prefix = f"{interval}:{asset.symbol}"
         high = Decimal(r.hget("high", prefix))
         low = Decimal(r.hget("low", prefix))
