@@ -36,7 +36,7 @@ def calculate_swing():
         assets = bot.bot_assets.all()
         for interval in fibo.intervals:
             for asset in assets:
-                last_price = r.hget("prices:last", asset.symbol)
+                last_price = r.hget("prices:last", f"{asset.symbol.lower()}usdt")
                 if last_price is None:
                     continue
                 last_price = Decimal(
@@ -691,46 +691,94 @@ def calculate_bollinger_signal(asset, bot, calc) -> dict | None:
         "emoji": "📉" if direction == "SELL" else "📈",
     }
 
+def _to_decimal(x):
+    if x is None:
+        return None
+    if isinstance(x, (bytes, bytearray)):
+        x = x.decode()
+    return Decimal(str(x))
+
 def calculate_fibo_signal(asset, bot):
     fibo_indicator = bot.fibo_indicators.first()
     if not fibo_indicator:
         return None
-    signals_found = []
-    for interval in fibo_indicator.intervals:
-        prev_close = HistQuotes.objects.filter(symbol = asset, interval = interval).order_by('-time').first().close_price
-        close = r.hget("prices:last", asset.symbol)
-        if not close:
-            continue
-        curr_close = Decimal(close) 
-        prefix = f"{interval}:{asset.symbol}"
-        high = Decimal(r.hget("high", prefix))
-        low = Decimal(r.hget("low", prefix))
-        diff = high - low
-        tolerance = diff * Decimal('0.003')
-        is_up_trend = bool(r.hget("up_trend", prefix))
-        direction = "BUY" if is_up_trend else "SELL"
-        
-        for level in fibo_indicator.levels:
-            price_at_level = high - (diff*level/100)
-            if is_up_trend:
-                if prev_close <= (price_at_level-tolerance) and curr_close > (price_at_level + tolerance):
-                    signals_found.append('BUY')
 
-            if not is_up_trend:        
-                if prev_close >= (price_at_level+tolerance) and curr_close < (price_at_level - tolerance):
-                    signals_found.append('SELL')
-                
-    if len(set(signals_found)) == 1 and len(signals_found) == len(fibo_indicator.intervals):
-            
-        return {
-            "indicator": "Fibo",
+    interval_signals = {} 
+
+    for interval in fibo_indicator.intervals:
+        last_quote = (
+            HistQuotes.objects
+            .filter(symbol=asset.symbol, interval=interval)
+            .order_by("-time")
+            .first()
+        )
+        if not last_quote:
+            continue
+        prev_close = Decimal(str(last_quote.close_price))
+
+        curr_close = _to_decimal(r.hget("prices:last", asset.symbol))
+        if curr_close is None:
+            continue
+
+        prefix = f"{interval}:{asset.symbol}"
+        high = _to_decimal(r.hget("high", prefix))
+        low  = _to_decimal(r.hget("low", prefix))
+        if high is None or low is None:
+            continue
+
+        diff = high - low
+        if diff <= 0:
+            continue
+
+        tolerance = diff * Decimal("0.003")
+
+        raw_trend = r.hget("up_trend", prefix)
+        is_up_trend = (raw_trend == b"1")  
+
+        def level_price(level_pct: Decimal) -> Decimal:
+            if is_up_trend:
+                return high - (diff * level_pct / 100)
+            else:
+                return low + (diff * level_pct / 100)
+
+        signal = None
+        for level in fibo_indicator.levels:
+            level_pct = Decimal(str(level))
+
+            p = level_price(level_pct)
+
+            if is_up_trend:
+                crossed_up = (prev_close <= (p - tolerance)) and (curr_close > (p + tolerance))
+                if crossed_up:
+                    signal = "BUY"
+                    break
+            else:
+                crossed_down = (prev_close >= (p + tolerance)) and (curr_close < (p - tolerance))
+                if crossed_down:
+                    signal = "SELL"
+                    break
+
+        if signal:
+            interval_signals[interval] = signal
+
+    if len(interval_signals) != len(fibo_indicator.intervals):
+        return None
+
+    unique = set(interval_signals.values())
+    if len(unique) != 1:
+        return None
+
+    direction = unique.pop()
+
+    return {
+        "indicator": "Fibo",
         "symbol": asset.symbol,
         "direction": direction,
         "current_price": curr_close,
         "value": None,
         "intervals": fibo_indicator.intervals,
         "emoji": "📉" if direction == "SELL" else "📈",
-        }
+    }
             
 def calculate_sr_signal(asset, bot, calc) -> dict | None:
     """Calculate Support/Resistance signal for a bot."""
