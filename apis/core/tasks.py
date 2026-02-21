@@ -698,6 +698,7 @@ def _to_decimal(x):
         x = x.decode()
     return Decimal(str(x))
 
+
 def level_price(is_up_trend, high, low, diff, level_pct: Decimal) -> Decimal:
     if is_up_trend:
         return high - (diff * level_pct / 100)
@@ -738,7 +739,6 @@ def calculate_fibo_signal(asset, bot):
 
         raw_trend = r.hget("up_trend", prefix)
         is_up_trend = raw_trend == b"1"
-
 
         signal = None
         for level in fibo_indicator.levels:
