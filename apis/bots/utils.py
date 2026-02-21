@@ -118,7 +118,7 @@ class IndicatorsCalc:
     def calculate_macd(
         self, quotes: list, fast_period: int = 12, slow_period: int = 26, signal_period: int = 9
     ) -> dict[str, float] | None:
-     
+
         if len(quotes) < slow_period + signal_period:
             return None
 
@@ -132,8 +132,7 @@ class IndicatorsCalc:
 
         macd_line = fast_ema - slow_ema
 
-
-        macd_values = [macd_line] 
+        macd_values = [macd_line]
         signal_line = (
             sum(macd_values[:signal_period]) / signal_period
             if len(macd_values) >= signal_period

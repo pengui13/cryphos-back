@@ -207,7 +207,6 @@ def calculate_signals():
             has_ma = bot.ma_indicators.exists()
             has_fibo = bot.fibo_indicators.exists()
 
-
             enabled_count = sum([has_rsi, has_bb, has_sr, has_ema, has_ma, has_fibo])
 
             signals = []
@@ -691,6 +690,7 @@ def calculate_bollinger_signal(asset, bot, calc) -> dict | None:
         "emoji": "📉" if direction == "SELL" else "📈",
     }
 
+
 def _to_decimal(x):
     if x is None:
         return None
@@ -698,17 +698,17 @@ def _to_decimal(x):
         x = x.decode()
     return Decimal(str(x))
 
+
 def calculate_fibo_signal(asset, bot):
     fibo_indicator = bot.fibo_indicators.first()
     if not fibo_indicator:
         return None
 
-    interval_signals = {} 
+    interval_signals = {}
 
     for interval in fibo_indicator.intervals:
         last_quote = (
-            HistQuotes.objects
-            .filter(symbol=asset.symbol, interval=interval)
+            HistQuotes.objects.filter(symbol=asset.symbol, interval=interval)
             .order_by("-time")
             .first()
         )
@@ -722,7 +722,7 @@ def calculate_fibo_signal(asset, bot):
 
         prefix = f"{interval}:{asset.symbol}"
         high = _to_decimal(r.hget("high", prefix))
-        low  = _to_decimal(r.hget("low", prefix))
+        low = _to_decimal(r.hget("low", prefix))
         if high is None or low is None:
             continue
 
@@ -733,7 +733,7 @@ def calculate_fibo_signal(asset, bot):
         tolerance = diff * Decimal("0.003")
 
         raw_trend = r.hget("up_trend", prefix)
-        is_up_trend = (raw_trend == b"1")  
+        is_up_trend = raw_trend == b"1"
 
         def level_price(level_pct: Decimal) -> Decimal:
             if is_up_trend:
@@ -779,7 +779,8 @@ def calculate_fibo_signal(asset, bot):
         "intervals": fibo_indicator.intervals,
         "emoji": "📉" if direction == "SELL" else "📈",
     }
-            
+
+
 def calculate_sr_signal(asset, bot, calc) -> dict | None:
     """Calculate Support/Resistance signal for a bot."""
     sr_indicator = bot.sr_indicators.first()
