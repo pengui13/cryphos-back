@@ -28,7 +28,7 @@ r = redis.from_url("redis://redis:6379/1", decode_responses=True)
 
 @shared_task
 def calculate_swing():
-    bots = Bot.objects.prefetch_related('fibo_indicators', 'bot_assets')
+    bots = Bot.objects.prefetch_related("fibo_indicators", "bot_assets")
     for bot in bots:
         fibo = bot.fibo_indicators.first()
         if not fibo:
@@ -39,8 +39,16 @@ def calculate_swing():
                 last_price = r.hget("prices:last", asset.symbol)
                 if last_price is None:
                     continue
-                last_price = Decimal(last_price.decode() if isinstance(last_price, (bytes, bytearray)) else last_price)
-                qs = HistQuotes.objects.filter(symbol = asset, interval = interval).order_by('-time').values_list('close_price', flat=True)[:fibo.period]
+                last_price = Decimal(
+                    last_price.decode()
+                    if isinstance(last_price, (bytes, bytearray))
+                    else last_price
+                )
+                qs = (
+                    HistQuotes.objects.filter(symbol=asset, interval=interval)
+                    .order_by("-time")
+                    .values_list("close_price", flat=True)[: fibo.period]
+                )
                 closes = list(qs)
                 if not closes:
                     continue

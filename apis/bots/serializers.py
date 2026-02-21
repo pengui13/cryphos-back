@@ -25,7 +25,6 @@ from .models import (
 ALLOWED_TFS = {"1MIN", "5MIN", "15MIN", "30MIN", "1HRS", "1DAY"}
 
 
-
 class FundingRateSerializer(serializers.ModelSerializer):
     asset = serializers.SerializerMethodField()
 
@@ -52,7 +51,6 @@ class BotSerializer(serializers.ModelSerializer):
     ema = serializers.SerializerMethodField()
     ma = serializers.SerializerMethodField()
     fib = serializers.SerializerMethodField()
-
 
     def get_rsi(self, obj):
         ind = obj.rsi_indicators.first()
@@ -100,7 +98,7 @@ class BotSerializer(serializers.ModelSerializer):
             "runtime",
             "last_heartbeat",
             "id",
-            'fib'
+            "fib",
         ]
         read_only_fields = [
             "created_at",
@@ -115,8 +113,7 @@ class BotSerializer(serializers.ModelSerializer):
             "runtime",
             "last_heartbeat",
             "id",
-            'fib'
-
+            "fib",
         ]
 
     def create(self, validated_data):
@@ -185,8 +182,8 @@ class ObvIndicatorSerializer(serializers.ModelSerializer):
         validated_data["bot"] = bot
         return super().create(validated_data)
 
-class FiboSerializer(serializers.ModelSerializer):
 
+class FiboSerializer(serializers.ModelSerializer):
     VALID_LEVELS = [
         Decimal("0"),
         Decimal("23.6"),
@@ -208,8 +205,8 @@ class FiboSerializer(serializers.ModelSerializer):
         return values
 
     def create(self, validated_data):
-        bot = self.context['bot']
-        validated_data['bot'] = bot
+        bot = self.context["bot"]
+        validated_data["bot"] = bot
         return super().create(validated_data)
 
 

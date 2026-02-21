@@ -123,7 +123,6 @@ serializer_classes = {
     "ema": EmaIndicatorSerializer,
     "ma": MaIndicatorSerializer,
     "fib": FiboSerializer,
-
 }
 
 

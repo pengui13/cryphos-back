@@ -295,8 +295,8 @@ CELERY_BEAT_SCHEDULE = {
         "schedule": timedelta(seconds=5),
     },
     "calculate-swing": {
-    "task": "core.tasks.calculate_swing",
-    "schedule": timedelta(seconds=5),
+        "task": "core.tasks.calculate_swing",
+        "schedule": timedelta(seconds=5),
     },
     "check_roi": {
         "task": "core.tasks.check_roi",
