@@ -104,7 +104,7 @@ services:
     working_dir: /app/apis
     environment:
       PYTHONPATH: /app
-    command: celery -A apis worker -l info --concurrency=2
+    command: uv run celery -A apis worker -l info -E --concurrency=2
 
   celery-beat:
     image: cryphos-app:latest
@@ -120,7 +120,7 @@ services:
       PYTHONPATH: /app
     volumes:
       - celerybeat_data:/data
-    command: celery -A apis beat -l info --schedule=/data/celerybeat-schedule
+    command: uv run celery -A apis beat -l info --schedule=/data/celerybeat-schedule
   tg:
     image: cryphos-app:latest
     depends_on:
@@ -151,7 +151,7 @@ services:
     ports:
       - "127.0.0.1:5555:5555"
     command: >
-      celery -A apis -b redis://redis:6379/0 flower --address=0.0.0.0 --port=5555 --basic_auth=${FLOWER_BASIC_AUTH}
+      uv run celery -A apis -b redis://redis:6379/0 flower --address=0.0.0.0 --port=5555 --basic_auth=${FLOWER_BASIC_AUTH}
 volumes:
   cryphos_pgdata:
   celerybeat_data:
