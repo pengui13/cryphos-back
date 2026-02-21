@@ -30,6 +30,7 @@ from .serializers import (
     BotBalanceSerializer,
     BotSerializer,
     EmaIndicatorSerializer,
+    FiboSerializer,
     FundingRateSerializer,
     MainBotSerializer,
     MaIndicatorSerializer,
@@ -37,7 +38,6 @@ from .serializers import (
     RsiIndicatorSerializer,
     SignalSerializer,
     SupportResistanceIndicatorSerializer,
-    FiboSerializer
 )
 
 REDIS_URL = "redis://redis:6379/1"

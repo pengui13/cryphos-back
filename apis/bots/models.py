@@ -7,7 +7,6 @@ from django.core.exceptions import ValidationError
 from django.core.validators import MaxValueValidator, MinValueValidator
 from django.db import models
 from django.utils import timezone
-from decimal import Decimal
 
 User = settings.AUTH_USER_MODEL
 
@@ -325,7 +324,7 @@ class FnGValue(models.Model):
 
 
 class FiboIndicator(BaseIndicator):
-    
+
     LEVEL_CHOICES = [
         ("0", "0%"),
         ("23.6", "23.6%"),
@@ -341,10 +340,10 @@ class FiboIndicator(BaseIndicator):
         models.DecimalField(max_digits=5, decimal_places=1),
         default=list,
     )
-    
+
     def __str__(self):
         return f"{self.period}|{[f"{level}|" for level in self.levels]}"
-    
+
 class Signal(models.Model):
     asset = models.ForeignKey(AssetCryptoCoin, on_delete=models.CASCADE)
     open_price = models.DecimalField(max_digits=20, decimal_places=8)

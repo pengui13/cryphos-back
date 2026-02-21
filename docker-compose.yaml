@@ -17,6 +17,23 @@ services:
       timeout: 3s
       retries: 20
 
+  flower:
+    image: cryphos-app:latest
+    container-name: cryphos-flower
+    restart: always
+    env_file: .env
+    depends_on:
+      redis:
+        condition: service_healthy
+      celery:
+        condition: service_started
+    working_dir: /app/apis
+    environment:
+      PYTHONPATH: /app
+    ports:
+      - "127.0.0.1:5555:5555"
+    command: >
+      celery -A apis -b redis://redis:6379/0 flower --address=0.0.0.0 --port=5555 --basic_auth=${FLOWER_BASIC_AUTH}
   redis:
     image: redis:7-alpine
     container_name: cryphos-redis

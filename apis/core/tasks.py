@@ -4,7 +4,7 @@ from decimal import Decimal
 import redis
 import requests
 from assets.models import AssetCryptoCoin, HistQuotes
-from bots.models import FundingRate, RiskSettings, Signal, Bot
+from bots.models import Bot, FundingRate, RiskSettings, Signal
 from bots.utils import IndicatorsCalc
 from celery import shared_task
 from django.conf import settings
