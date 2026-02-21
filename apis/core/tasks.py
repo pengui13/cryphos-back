@@ -708,9 +708,7 @@ def calculate_fibo_signal(asset, bot):
 
     for interval in fibo_indicator.intervals:
         last_quote = (
-            HistQuotes.objects.filter(symbol=asset, interval=interval)
-            .order_by("-time")
-            .first()
+            HistQuotes.objects.filter(symbol=asset, interval=interval).order_by("-time").first()
         )
         if not last_quote:
             continue
