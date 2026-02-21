@@ -36,7 +36,7 @@ def calculate_swing():
         assets = bot.bot_assets.all()
         for interval in fibo.intervals:
             for asset in assets:
-                last_price = r.hget("prices:last", f"{asset.symbol.lower()}usdt")
+                last_price = r.hget("prices:last", f"{asset.symbol.upper()}USDT")
                 if last_price is None:
                     continue
                 last_price = Decimal(
@@ -698,6 +698,12 @@ def _to_decimal(x):
         x = x.decode()
     return Decimal(str(x))
 
+def level_price(is_up_trend, high, low, diff, level_pct: Decimal) -> Decimal:
+    if is_up_trend:
+        return high - (diff * level_pct / 100)
+    else:
+        return low + (diff * level_pct / 100)
+
 
 def calculate_fibo_signal(asset, bot):
     fibo_indicator = bot.fibo_indicators.first()
@@ -733,17 +739,12 @@ def calculate_fibo_signal(asset, bot):
         raw_trend = r.hget("up_trend", prefix)
         is_up_trend = raw_trend == b"1"
 
-        def level_price(level_pct: Decimal) -> Decimal:
-            if is_up_trend:
-                return high - (diff * level_pct / 100)
-            else:
-                return low + (diff * level_pct / 100)
 
         signal = None
         for level in fibo_indicator.levels:
             level_pct = Decimal(str(level))
 
-            p = level_price(level_pct)
+            p = level_price(is_up_trend, high, low, diff, level_pct)
 
             if is_up_trend:
                 crossed_up = (prev_close <= (p - tolerance)) and (curr_close > (p + tolerance))
