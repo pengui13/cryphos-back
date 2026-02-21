@@ -63,11 +63,9 @@ class IndicatorsCalc:
             prev = float(quotes_to_analyze[i - 1].high_price)
             next_q = float(quotes_to_analyze[i + 1].high_price)
 
-            # Local high
             if current > prev and current > next_q:
                 levels.append(current)
 
-            # Local low
             current_low = float(quotes_to_analyze[i].low_price)
             prev_low = float(quotes_to_analyze[i - 1].low_price)
             next_low = float(quotes_to_analyze[i + 1].low_price)
@@ -78,10 +76,8 @@ class IndicatorsCalc:
         if not levels:
             return None
 
-        # Cluster similar levels (within 0.5% of each other)
         clustered_levels = self._cluster_levels(levels, threshold=0.005)
 
-        # Sort and return top N levels
         clustered_levels.sort()
 
         return clustered_levels[:num_levels]
@@ -108,15 +104,12 @@ class IndicatorsCalc:
             current_level = sorted_levels[i]
             cluster_avg = sum(current_cluster) / len(current_cluster)
 
-            # Check if current level is within threshold of cluster average
             if abs(current_level - cluster_avg) / cluster_avg <= threshold:
                 current_cluster.append(current_level)
             else:
-                # Save current cluster and start new one
                 clusters.append(sum(current_cluster) / len(current_cluster))
                 current_cluster = [current_level]
 
-        # Don't forget the last cluster
         if current_cluster:
             clusters.append(sum(current_cluster) / len(current_cluster))
 
@@ -125,36 +118,22 @@ class IndicatorsCalc:
     def calculate_macd(
         self, quotes: list, fast_period: int = 12, slow_period: int = 26, signal_period: int = 9
     ) -> dict[str, float] | None:
-        """
-        Calculate MACD (Moving Average Convergence Divergence).
-
-        Args:
-            quotes: List of HistQuotes objects (ordered by time DESC)
-            fast_period: Fast EMA period (default: 12)
-            slow_period: Slow EMA period (default: 26)
-            signal_period: Signal line EMA period (default: 9)
-
-        Returns:
-            Dict with 'macd', 'signal', 'histogram' or None
-        """
+     
         if len(quotes) < slow_period + signal_period:
             return None
 
         closes = [float(q.close_price) for q in quotes]
 
-        # Calculate EMAs
         fast_ema = self._calculate_ema(closes, fast_period)
         slow_ema = self._calculate_ema(closes, slow_period)
 
         if fast_ema is None or slow_ema is None:
             return None
 
-        # MACD line = fast EMA - slow EMA
         macd_line = fast_ema - slow_ema
 
-        # Calculate signal line (EMA of MACD)
-        # For simplicity, using SMA here; proper implementation would use EMA
-        macd_values = [macd_line]  # In real implementation, calculate for all periods
+
+        macd_values = [macd_line] 
         signal_line = (
             sum(macd_values[:signal_period]) / signal_period
             if len(macd_values) >= signal_period

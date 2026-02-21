@@ -205,8 +205,10 @@ def calculate_signals():
             has_sr = bot.sr_indicators.exists()
             has_ema = bot.ema_indicators.exists()
             has_ma = bot.ma_indicators.exists()
+            has_fibo = bot.fibo_indicators.exists()
 
-            enabled_count = sum([has_rsi, has_bb, has_sr, has_ema, has_ma])
+
+            enabled_count = sum([has_rsi, has_bb, has_sr, has_ema, has_ma, has_fibo])
 
             signals = []
 
@@ -244,7 +246,13 @@ def calculate_signals():
                 else:
                     logger.info("EMA: No signal")
                     continue
-
+            if has_fibo:
+                fibo_signal = calculate_fibo_signal(asset, bot)
+                if fibo_signal:
+                    signals.append(fibo_signal)
+                    logger.info(f"Fibo: {fibo_signal['direction']}")
+                else:
+                    continue
             if has_ma:
                 ma_signal = calculate_ma_signal(asset, bot, calc)
                 if ma_signal:
@@ -683,7 +691,44 @@ def calculate_bollinger_signal(asset, bot, calc) -> dict | None:
         "emoji": "📉" if direction == "SELL" else "📈",
     }
 
+def calculate_fibo_signal(asset, bot):
+    fibo_indicator = bot.fibo_indicators.first()
+    if not fibo_indicator:
+        return None
+    signals_found = []
+    for interval in fibo_indicator.intervals:
+        prev_close = HistQuotes.objects.filter(symbol = asset, interval = interval).order_by('-time').first().close_price
+        curr_close = Decimal(r.hget("prices:last", asset.symbol))
+        prefix = f"{interval}:{asset.symbol}"
+        high = Decimal(r.hget("high", prefix))
+        low = Decimal(r.hget("low", prefix))
+        diff = high - low
+        tolerance = diff * Decimal('0.003')
+        is_up_trend = bool(r.hget("up_trend", prefix))
+        direction = "BUY" if is_up_trend else "SELL"
+        
+        for level in fibo_indicator.levels:
+            price_at_level = high - (diff*level/100)
+            if is_up_trend:
+                if prev_close <= (price_at_level-tolerance) and curr_close > (price_at_level + tolerance):
+                    signals_found.append('BUY')
 
+            if not is_up_trend:        
+                if prev_close >= (price_at_level+tolerance) and curr_close < (price_at_level - tolerance):
+                    signals_found.append('SELL')
+                
+    if len(set(signals_found)) == 1 and len(signals_found) == len(fibo_indicator.intervals):
+            
+        return {
+            "indicator": "Fibo",
+        "symbol": asset.symbol,
+        "direction": direction,
+        "current_price": curr_close,
+        "value": None,
+        "intervals": fibo_indicator.intervals,
+        "emoji": "📉" if direction == "SELL" else "📈",
+        }
+            
 def calculate_sr_signal(asset, bot, calc) -> dict | None:
     """Calculate Support/Resistance signal for a bot."""
     sr_indicator = bot.sr_indicators.first()
