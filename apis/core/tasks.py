@@ -738,7 +738,7 @@ def calculate_fibo_signal(asset, bot):
         tolerance = diff * Decimal("0.003")
 
         raw_trend = r.hget("up_trend", prefix)
-        is_up_trend = raw_trend == b"1"
+        is_up_trend = raw_trend == "1"
 
         signal = None
         for level in fibo_indicator.levels:
