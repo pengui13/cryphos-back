@@ -19,7 +19,7 @@ services:
 
   flower:
     image: cryphos-app:latest
-    container-name: cryphos-flower
+    container_name: cryphos-flower
     restart: always
     env_file: .env
     depends_on:
