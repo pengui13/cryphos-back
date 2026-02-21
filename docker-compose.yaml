@@ -48,7 +48,6 @@ services:
     volumes:
       - ./staticfiles:/app/staticfiles
       - .:/app
-      - venv_data:/app/.venv
     command: >
       sh -c "python manage.py migrate &&
              exec daphne -b 0.0.0.0 -p 8000 apis.asgi:application"
@@ -155,4 +154,3 @@ services:
 volumes:
   cryphos_pgdata:
   celerybeat_data:
-  venv_data:
