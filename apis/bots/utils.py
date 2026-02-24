@@ -1,13 +1,11 @@
-"""
-Indicators calculation utilities for trading bots.
-"""
-
 import logging
 from decimal import Decimal
 
 import pandas as pd
-import pandas_ta as ta
 import redis
+import ta.momentum
+import ta.trend
+import ta.volatility
 
 logger = logging.getLogger(__name__)
 
@@ -19,21 +17,30 @@ class IndicatorsCalc:
         if len(prices) < period + 1:
             return None
 
-        df = pd.DataFrame({"close": [float(p) for p in reversed(prices)]})
-        rsi = ta.rsi(df["close"], length=period).iloc[-1]
+        close = pd.Series([float(p) for p in reversed(prices)])
+        rsi = ta.momentum.RSIIndicator(close=close, window=period).rsi().iloc[-1]
 
         return round(rsi, 2) if pd.notna(rsi) else None
 
     def calculate_bollinger_bands(
         self, prices: list[Decimal], period: int = 20, std_dev: float = 2.0
     ) -> dict[str, float] | None:
+        if len(prices) < period:
+            return None
 
-        df = pd.DataFrame({"close": [float(p) for p in reversed(prices)]})
-        bbands = ta.bbands(df["close"], length=period, std=std_dev)  # type: ignore[call-arg]
+        close = pd.Series([float(p) for p in reversed(prices)])
+        bb = ta.volatility.BollingerBands(close=close, window=period, window_dev=int(std_dev))
+        upper = bb.bollinger_hband().iloc[-1]
+        middle = bb.bollinger_mavg().iloc[-1]
+        lower = bb.bollinger_lband().iloc[-1]
+
+        if not all(pd.notna(v) for v in [upper, middle, lower]):
+            return None
+
         return {
-            "upper": bbands[f"BBU_{period}_{std_dev}"].iloc[-1],
-            "middle": bbands[f"BBM_{period}_{std_dev}"].iloc[-1],
-            "lower": bbands[f"BBL_{period}_{std_dev}"].iloc[-1],
+            "upper": round(upper, 4),
+            "middle": round(middle, 4),
+            "lower": round(lower, 4),
         }
 
     def calculate_support_resistance(
@@ -54,8 +61,6 @@ class IndicatorsCalc:
             return None
 
         quotes_to_analyze = quotes[:lookback]
-
-        # Find local highs and lows
         levels = []
 
         for i in range(1, len(quotes_to_analyze) - 1):
@@ -77,7 +82,6 @@ class IndicatorsCalc:
             return None
 
         clustered_levels = self._cluster_levels(levels, threshold=0.005)
-
         clustered_levels.sort()
 
         return clustered_levels[:num_levels]
@@ -118,29 +122,23 @@ class IndicatorsCalc:
     def calculate_macd(
         self, quotes: list, fast_period: int = 12, slow_period: int = 26, signal_period: int = 9
     ) -> dict[str, float] | None:
-
         if len(quotes) < slow_period + signal_period:
             return None
 
-        closes = [float(q.close_price) for q in quotes]
-
-        fast_ema = self._calculate_ema(closes, fast_period)
-        slow_ema = self._calculate_ema(closes, slow_period)
-
-        if fast_ema is None or slow_ema is None:
-            return None
-
-        macd_line = fast_ema - slow_ema
-
-        macd_values = [macd_line]
-        signal_line = (
-            sum(macd_values[:signal_period]) / signal_period
-            if len(macd_values) >= signal_period
-            else macd_line
+        close = pd.Series([float(q.close_price) for q in quotes])
+        macd = ta.trend.MACD(
+            close=close,
+            window_fast=fast_period,
+            window_slow=slow_period,
+            window_sign=signal_period,
         )
 
-        # Histogram = MACD - Signal
-        histogram = macd_line - signal_line
+        macd_line = macd.macd().iloc[-1]
+        signal_line = macd.macd_signal().iloc[-1]
+        histogram = macd.macd_diff().iloc[-1]
+
+        if not all(pd.notna(v) for v in [macd_line, signal_line, histogram]):
+            return None
 
         return {
             "macd": round(macd_line, 4),
@@ -152,8 +150,8 @@ class IndicatorsCalc:
         if len(prices) < period:
             return None
 
-        df = pd.DataFrame({"close": [float(p) for p in reversed(prices)]})
-        ema = ta.ema(df["close"], length=period).iloc[-1]
+        close = pd.Series([float(p) for p in reversed(prices)])
+        ema = ta.trend.EMAIndicator(close=close, window=period).ema_indicator().iloc[-1]
 
         return round(ema, 4) if pd.notna(ema) else None
 
@@ -161,7 +159,7 @@ class IndicatorsCalc:
         if len(prices) < period:
             return None
 
-        df = pd.DataFrame({"close": [float(p) for p in reversed(prices)]})
-        ma = ta.sma(df["close"], length=period).iloc[-1]
+        close = pd.Series([float(p) for p in reversed(prices)])
+        sma = ta.trend.SMAIndicator(close=close, window=period).sma_indicator().iloc[-1]
 
-        return round(ma, 4) if pd.notna(ma) else None
+        return round(sma, 4) if pd.notna(sma) else None

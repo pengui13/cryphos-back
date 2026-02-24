@@ -16,7 +16,7 @@ from rest_framework.views import APIView
 from rest_framework_simplejwt.serializers import TokenRefreshSerializer
 from rest_framework_simplejwt.tokens import RefreshToken
 from rest_framework_simplejwt.views import TokenRefreshView
-
+import throttling as thrott
 from .models import BillingProfile, PasswordResetCode
 from .serializers import (
     LoginSerializer,
@@ -167,14 +167,12 @@ def stripe_webhook(request):
 
         bp = None
 
-        # 1) по billing_profile_id
         bp_id = meta.get("billing_profile_id")
         if bp_id:
             bp = BillingProfile.objects.filter(id=bp_id).first()
             if bp:
                 print("FOUND BP BY ID:", bp_id)
 
-        # 2) по subscription / customer
         if not bp:
             bp = (
                 BillingProfile.objects.filter(stripe_subscription_id=sub_id).first()
@@ -183,7 +181,6 @@ def stripe_webhook(request):
             if bp:
                 print("FOUND BP BY SUB/CUSTOMER")
 
-        # 3) по user_id
         user = None
         user_id = meta.get("user_id")
         if not bp and user_id:
@@ -194,7 +191,6 @@ def stripe_webhook(request):
             except User.DoesNotExist:
                 print("User with id from meta not found:", user_id)
 
-        # 4) по email клиента
         if not bp and customer_id:
             try:
                 cust = stripe.Customer.retrieve(customer_id)
@@ -250,9 +246,6 @@ def stripe_webhook(request):
             f"Updated BillingProfile for user {u.id}: status={bp.status}, is_active={bp.is_active}"
         )
 
-    # --- ТИПЫ СОБЫТИЙ ---
-
-    # 1) классический checkout.session.completed (когда он всё-таки придёт)
     if etype == "checkout.session.completed":
         session_meta = data.get("metadata", {}) or {}
         print("SESSION META:", session_meta)
@@ -261,7 +254,6 @@ def stripe_webhook(request):
             sub = stripe.Subscription.retrieve(data["subscription"])
             update_from_subscription(sub, session_meta=session_meta)
 
-    # 2) прямые subscription-события, если включишь их в вебхуке
     elif etype in (
         "customer.subscription.created",
         "customer.subscription.updated",
@@ -346,6 +338,7 @@ class RegisterResendView(generics.CreateAPIView):
 class LoginView(generics.GenericAPIView):
     serializer_class = LoginSerializer
     permission_classes = [Aa]
+    throttle_classes = [thrott.AuthTrottle]
 
     def post(self, request, *args, **kwargs):
         serializer = self.get_serializer(data=request.data)

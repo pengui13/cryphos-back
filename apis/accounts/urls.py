@@ -1,37 +1,27 @@
 from django.urls import path
 
-from .views import (
-    GetUserTelegram,
-    LoginView,
-    RefreshTokenView,
-    RegisterResendView,
-    RegisterStartView,
-    RegisterVerifyView,
-    RegisterView,
-    ResetStartView,
-    ResetVerifyView,
-    billing_me,
-    create_billing_portal_session,
-    create_checkout_session,
-    stripe_webhook,
-)
+from . import views
 
 urlpatterns = [
-    path("register/start/", RegisterStartView.as_view(), name="register"),
-    path("register/verify/", RegisterVerifyView.as_view(), name="register-verify"),
-    path("register/resend/", RegisterResendView.as_view(), name="register-resend"),
-    path("register/", RegisterView.as_view(), name="register"),
-    path("login/", LoginView.as_view(), name="login"),
-    path("refresh/", RefreshTokenView.as_view(), name="token_refresh"),
-    path("checkout/", create_checkout_session),
-    path("portal/", create_billing_portal_session),
-    path("webhook/", stripe_webhook),
-    path("reset/start/", ResetStartView.as_view(), name="reset-start"),
-    path("reset/verify/", ResetVerifyView.as_view(), name="reset-verify"),
-    path("get_user_tg/", GetUserTelegram.as_view(), name="get_user_tg"),
+    path("register/start/", views.RegisterStartView.as_view(), name="register"),
+    path("register/verify/", views.RegisterVerifyView.as_view(), name="register-verify"),
+    path("register/resend/", views.RegisterResendView.as_view(), name="register-resend"),
+    path("register/", views.RegisterView.as_view(), name="register"),
+    path("login/", views.LoginView.as_view(), name="login"),
+    path("refresh/", views.RefreshTokenView.as_view(), name="token_refresh"),
+    path("checkout/", views.create_checkout_session),
+    path("portal/", views.create_billing_portal_session),
+    path("webhook/", views.stripe_webhook),
+    path("reset/start/", views.ResetStartView.as_view(), name="reset-start"),
+    path("reset/verify/", views.ResetVerifyView.as_view(), name="reset-verify"),
+    path("get_user_tg/", views.GetUserTelegram.as_view(), name="get_user_tg"),
     path(
-        "billing/create-checkout-session/", create_checkout_session, name="create_checkout_session"
+        "billing/create-checkout-session/",
+        views.create_checkout_session,
+        name="create_checkout_session",
     ),
-    path("billing/portal/", create_billing_portal_session, name="create_billing_portal_session"),
-    path("billing/me/", billing_me, name="billing_me"),
+    path(
+        "billing/portal/", views.create_billing_portal_session, name="create_billing_portal_session"
+    ),
+    path("billing/me/", views.billing_me, name="billing_me"),
 ]

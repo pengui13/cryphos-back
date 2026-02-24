@@ -111,7 +111,7 @@ class RegisterVerifySerializer(serializers.Serializer):
 
         user = User(username=pending.username, email=pending.email)
         user.password = pending.password_hash
-        user.is_active = True  # type: ignore[assignment]
+        user.is_active = True
         user.save()
 
         pending.delete()
@@ -119,7 +119,7 @@ class RegisterVerifySerializer(serializers.Serializer):
 
 
 class LoginSerializer(serializers.Serializer):
-    email = serializers.EmailField()  # Changed from username to email
+    email = serializers.EmailField()
     password = serializers.CharField(write_only=True)
     access = serializers.CharField(read_only=True)
     refresh = serializers.CharField(read_only=True)

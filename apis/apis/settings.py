@@ -60,6 +60,7 @@ SPECTACULAR_SETTINGS = {
     },
 }
 REST_FRAMEWORK = {
+    "DEFAULT_THROTTLE_RATES": {"anon": "300/day", "user": "5000/day", "auth": "10/minute"},
     "DEFAULT_AUTHENTICATION_CLASSES": (
         "rest_framework_simplejwt.authentication.JWTAuthentication",
     ),

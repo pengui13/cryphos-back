@@ -1,39 +1,28 @@
-[tool.ruff]
-line-length=100
-target-version="py312"
-
-[tool.ruff.lint]
-select = [
-    "E",
-    "W",   
-    "F",
-    "I",
-    "N",   
-    "UP",
-    "B",
+[project]
+name = "cryphos-back"
+version = "0.1.0"
+requires-python = ">=3.12,<3.14"
+dependencies = [
+    "celery==5.6.2",
+    "channels>=4.0,<5.0",
+    "channels-redis>=4.0,<5.0",
+    "daphne>=4.0,<5.0",
+    "Django==5.2.1",
+    "django-cors-headers==4.9.0",
+    "django-environ==0.12.0",
+    "djangorestframework==3.16.1",
+    "djangorestframework-simplejwt==5.5.1",
+    "drf-spectacular==0.29.0",
+    "flower==2.0.1",
+    "pandas==2.2.3",
+    "psycopg[binary,pool]==3.2.4",
+    "python-telegram-bot==21.9",
+    "redis==7.1.0",
+    "requests==2.32.5",
+    "stripe==14.3.0",
+    "ta==0.11.0",  
+    "websockets==13.1",
 ]
-ignore = [
-    "E203",
-    "E266", 
-    "E501",  
-]
-
-[tool.ruff.lint.per-file-ignores]
-"*/migrations/*" = ["E501"]
-"__init__.py" = ["F401"] 
-
-[tool.ruff.lint.isort]
-known-first-party = ["apis", "config"]
-
-[tool.ty.environment]
-extra-paths = ["apis"]
-python-platform = "linux"
-
-[tool.uv]
-python-preference = "only-system"
-
-[tool.ty.rules]
-unresolved-attribute = "ignore"
 
 [dependency-groups]
 dev = [
@@ -45,29 +34,27 @@ dev = [
     "types-redis>=4.6.0.20241004",
 ]
 
+[tool.uv]
+python-preference = "only-system"
 
-[project]
-name = "cryphos-back"
-version = "0.1.0"
-requires-python = ">=3.12"
-dependencies = [
-    "flower",
-    "celery==5.6.2",
-    "Django==6.0.2",
-    "django-cors-headers==4.9.0",
-    "django-environ==0.12.0",
-    "djangorestframework==3.16.1",
-    "djangorestframework_simplejwt==5.5.1",
-    "drf-spectacular==0.29.0",
-    "pandas",
-    "pandas-ta",
-    "psycopg[binary,pool]",
-    "python-telegram-bot",
-    "redis==7.1.0",
-    "requests==2.32.5",
-    "stripe==14.3.0",
-    "websockets",
-    "channels>=4.0,<5.0",
-    "channels-redis>=4.0,<5.0",
-    "daphne>=4.0,<5.0",
-]
+[tool.ruff]
+line-length = 100
+target-version = "py312"
+
+[tool.ruff.lint]
+select = ["E", "W", "F", "I", "N", "UP", "B"]
+ignore = ["E203", "E266", "E501"]
+
+[tool.ruff.lint.per-file-ignores]
+"__init__.py" = ["F401"]
+"*/migrations/*" = ["ALL"]
+
+[tool.ruff.lint.isort]
+known-first-party = ["apis", "config"]
+
+[tool.ty.environment]
+extra-paths = ["apis"]
+python-platform = "linux"
+
+[tool.ty.rules]
+unresolved-attribute = "ignore"
