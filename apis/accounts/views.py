@@ -2,6 +2,7 @@ import random
 
 import requests
 import stripe
+import throttling as thrott
 from bots.models import Bot
 from django.conf import settings
 from django.contrib.auth import get_user_model
@@ -16,7 +17,7 @@ from rest_framework.views import APIView
 from rest_framework_simplejwt.serializers import TokenRefreshSerializer
 from rest_framework_simplejwt.tokens import RefreshToken
 from rest_framework_simplejwt.views import TokenRefreshView
-import throttling as thrott
+
 from .models import BillingProfile, PasswordResetCode
 from .serializers import (
     LoginSerializer,
