@@ -111,7 +111,8 @@ class RegisterVerifySerializer(serializers.Serializer):
 
         user = User(username=pending.username, email=pending.email)
         user.password = pending.password_hash
-        user.is_active = True
+        setattr(user, "is_active", True)
+
         user.save()
 
         pending.delete()
