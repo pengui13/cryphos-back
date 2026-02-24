@@ -26,7 +26,6 @@ DEBUG = ENV("DEBUG")
 ALLOWED_HOSTS = ["cryphos.com"]
 
 
-
 SUPPORTED_TIMEFRAMES = {
     "1m": "1MIN",
     "5m": "5MIN",
@@ -235,10 +234,8 @@ CSRF_TRUSTED_ORIGINS = [
 ]
 
 if DEBUG:
-    CSRF_TRUSTED_ORIGINS += [
-    "http://localhost:3000",
-    "http://127.0.0.1:3000"]
-    ALLOWED_HOSTS += [ "127.0.0.1", "localhost"]
+    CSRF_TRUSTED_ORIGINS += ["http://localhost:3000", "http://127.0.0.1:3000"]
+    ALLOWED_HOSTS += ["127.0.0.1", "localhost"]
 
 
 FRONTEND_URL = ENV("FRONTEND_URL")
