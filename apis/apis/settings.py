@@ -23,7 +23,8 @@ environ.Env.read_env(os.path.join(BASE_DIR, ".env"))
 ENV = environ.Env()
 DEBUG = ENV("DEBUG")
 
-ALLOWED_HOSTS = ["cryphos.com", "127.0.0.1", "localhost", "51.68.190.16"]
+ALLOWED_HOSTS = ["cryphos.com"]
+
 
 
 SUPPORTED_TIMEFRAMES = {
@@ -98,7 +99,7 @@ MIDDLEWARE = [
 
 AUTH_USER_MODEL = "accounts.User"
 APPEND_SLASH = False
-# CORS Settings - Fixed for development
+
 CORS_ALLOWED_ORIGINS = [
     "http://localhost:3000",
     "http://127.0.0.1:3000",
@@ -169,7 +170,6 @@ TEMPLATES = [
 ]
 
 WSGI_APPLICATION = "apis.wsgi.application"
-
 ASGI_APPLICATION = "apis.asgi.application"
 
 CACHES = {
@@ -193,8 +193,6 @@ DATABASES = {
     }
 }
 
-# Password validation
-# https://docs.djangoproject.com/en/5.2/ref/settings/#auth-password-validators
 
 AUTH_PASSWORD_VALIDATORS = [
     {
@@ -211,8 +209,6 @@ AUTH_PASSWORD_VALIDATORS = [
     },
 ]
 
-# Internationalization
-# https://docs.djangoproject.com/en/5.2/topics/i18n/
 
 LANGUAGE_CODE = "en-us"
 
@@ -235,19 +231,21 @@ TELEGRAM_BOT_TOKEN = ENV("TELEGRAM_BOT_TOKEN")
 
 
 CSRF_TRUSTED_ORIGINS = [
-    "http://localhost:3000",
-    "http://127.0.0.1:3000",
     "https://cryphos.com",
-    "https://localhost:3000",
-    "https://127.0.0.1:3000",
 ]
+
+if DEBUG:
+    CSRF_TRUSTED_ORIGINS += [
+    "http://localhost:3000",
+    "http://127.0.0.1:3000"]
+    ALLOWED_HOSTS += [ "127.0.0.1", "localhost"]
+
 
 FRONTEND_URL = ENV("FRONTEND_URL")
 SECRET_KEY = ENV("SECRET_KEY")
 STRIPE_SECRET_KEY = ENV("STRIPE_SECRET_KEY")
 STRIPE_WEBHOOK_SECRET = ENV("STRIPE_WEBHOOK_SECRET")
 STRIPE_PRICE_ID = ENV("STRIPE_PRICE_ID")
-
 
 EMAIL_BACKEND = ENV("EMAIL_BACKEND")
 EMAIL_HOST = ENV("EMAIL_HOST")
