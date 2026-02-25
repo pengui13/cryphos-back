@@ -1,6 +1,7 @@
 import os
 from datetime import timedelta
 from pathlib import Path
+import sentry_sdk
 
 import environ
 from celery.schedules import crontab
@@ -293,3 +294,12 @@ CELERY_BEAT_SCHEDULE = {
         "schedule": crontab(hour="0,8,16", minute=5),
     },
 }
+
+sentry_sdk.init(
+    dsn=ENV("SENTRY_DSN"),
+    traces_sample_rate=0.2,
+    profiles_sample_rate=0.1,
+    send_default_pii=True,
+    environment=os.environ.get("ENVIRONMENT", "production"),
+    release=os.environ.get("SENTRY_RELEASE", "cryphos@latest"),
+)
