@@ -46,6 +46,7 @@ services:
     environment:
       PYTHONPATH: /app
     volumes:
+      - ./backups:/app/backups
       - ./staticfiles:/app/staticfiles
       - .:/app
     command: >

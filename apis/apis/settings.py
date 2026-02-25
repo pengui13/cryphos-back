@@ -43,7 +43,17 @@ INSTALLED_APPS = [
     "redis",
     "channels",
     "drf_spectacular",
+    "dbbackup",
 ]
+
+
+DBBACKUP_STORAGE = "storages.backends.s3boto3.S3Boto3Storage"
+DBBACKUP_STORAGE_OPTIONS = {
+    "access_key": os.environ["B2_KEY_ID"],
+    "secret_key": os.environ["B2_APP_KEY"],
+    "bucket_name": "cryphos-backups",
+    "endpoint_url": "https://s3.eu-central-003.backblazeb2.com",
+}
 
 SPECTACULAR_SETTINGS = {
     "TITLE": "Cryphos API",
@@ -292,6 +302,10 @@ CELERY_BEAT_SCHEDULE = {
     "parse_funding_rate": {
         "task": "core.tasks.parse_funding_rate",
         "schedule": crontab(hour="0,8,16", minute=5),
+    },
+    "daily-backup": {
+        "task": "your_app.tasks.backup_database",
+        "schedule": crontab(hour=4, minute=0),
     },
 }
 

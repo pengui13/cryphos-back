@@ -10,6 +10,7 @@ from celery import shared_task
 from django.conf import settings
 from django.contrib.auth import get_user_model
 from django.core.cache import cache
+from django.core.management import call_command
 from django.utils import timezone
 
 from core.fetching_service import FetchingService
@@ -356,6 +357,11 @@ def build_close_signal_message(signal, roi: float, close_reason: str | None) -> 
 """.strip()
 
     return msg
+
+
+@shared_task
+def backup_database():
+    call_command("dbackup", "--clean")
 
 
 def interval_to_sec(period: str) -> int:
