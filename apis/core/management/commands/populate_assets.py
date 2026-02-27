@@ -14,7 +14,6 @@ def get_top_symbols(limit: int = 50):
     resp.raise_for_status()
     data = resp.json()
 
-    # Filter only USDT pairs and sort by quote volume
     usdt_pairs = [
         t
         for t in data

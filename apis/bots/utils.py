@@ -6,13 +6,28 @@ import redis
 import ta.momentum
 import ta.trend
 import ta.volatility
+from django.conf import settings
 
 logger = logging.getLogger(__name__)
 
-r = redis.from_url("redis://redis:6379/1", decode_responses=True)
+
+class RedisService:
+
+    r = redis.from_url(settings.REDIS_URL,
+                       decode_responses=True)
+
+    @classmethod
+    def get_values(cls,
+                   list_of_values: list[str]) -> dict[str, str | None]:
+        results = {}
+        for value in list_of_values:
+            result = cls.r.get(value) or None
+            results[value] = result
+        return results
 
 
 class IndicatorsCalc:
+
     def calculate_rsi(self, prices: list[Decimal], period: int = 14) -> float | None:
         if len(prices) < period + 1:
             return None

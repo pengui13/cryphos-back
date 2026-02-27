@@ -7,13 +7,11 @@ from .models import (
     AtrIndicator,
     BollingerBandsIndicator,
     Bot,
-    BotBalance,
     BotStat,
     EmaIndicator,
     FiboIndicator,
     FundingRate,
     MacdIndicator,
-    MainBotSettings,
     MaIndicator,
     ObvIndicator,
     RiskSettings,
@@ -79,10 +77,9 @@ class BotSerializer(serializers.ModelSerializer):
     class Meta:
         model = Bot
         fields = [
+            "id",
             "created_at",
             "bot_assets",
-            "is_active",
-            "description",
             "roi",
             "pnl",
             "rsi",
@@ -90,14 +87,7 @@ class BotSerializer(serializers.ModelSerializer):
             "sr",
             "ema",
             "ma",
-            "accuracy",
-            "frequency",
-            "max_drawdown",
-            "risk",
             "last_activated",
-            "runtime",
-            "last_heartbeat",
-            "id",
             "fib",
         ]
         read_only_fields = [
@@ -110,8 +100,6 @@ class BotSerializer(serializers.ModelSerializer):
             "ema",
             "ma",
             "last_activated",
-            "runtime",
-            "last_heartbeat",
             "id",
             "fib",
         ]
@@ -125,14 +113,13 @@ class BotSerializer(serializers.ModelSerializer):
 
 
 class SignalSerializer(serializers.ModelSerializer):
-    asset = serializers.SerializerMethodField()
-
-    def get_asset(self, obj):
-        return obj.asset.symbol
+    asset = serializers.CharField(source="asset.symbol", read_only=True)
 
     class Meta:
         model = Signal
-        fields = "__all__"
+        fields = ["asset", "bot", "close_price", "closed_at",
+                  "created_at", "is_long", "is_open", "open_price"]
+        read_only_fields = fields
 
 
 class SupportResistanceIndicatorSerializer(serializers.ModelSerializer):
@@ -210,12 +197,6 @@ class FiboSerializer(serializers.ModelSerializer):
         return super().create(validated_data)
 
 
-class MainBotSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = MainBotSettings
-        fields = "__all__"
-
-
 class RsiIndicatorSerializer(serializers.ModelSerializer):
     class Meta:
         model = RsiIndicator
@@ -224,17 +205,6 @@ class RsiIndicatorSerializer(serializers.ModelSerializer):
     def create(self, validated_data):
         bot = self.context["bot"]
         validated_data["bot"] = bot
-        return super().create(validated_data)
-
-
-class BotBalanceSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = BotBalance
-        fields = ["bot", "initial_balance"]
-
-    def create(self, validated_data):
-        validated_data["current_balance"] = validated_data["initial_balance"]
-        validated_data["user"] = self.context["request"].user
         return super().create(validated_data)
 
 
@@ -293,40 +263,8 @@ class AtrIndicatorSerializer(serializers.ModelSerializer):
         return super().create(validated_data)
 
 
-class GetBotSubscribers(serializers.ModelSerializer):
-    class Meta:
-        model = BotBalance
-        fields = ["initial_balance", "current_balance", "unrealised_pnl"]
-
-
 class RiskSerializer(serializers.ModelSerializer):
-    take_profit = serializers.DecimalField(
-        max_digits=5,
-        decimal_places=2,
-        min_value=0.01,
-        max_value=100,
-        required=False,
-        allow_null=True,
-    )
-    stop_loss = serializers.DecimalField(
-        max_digits=5,
-        decimal_places=2,
-        min_value=0.01,
-        max_value=100,
-        required=False,
-        allow_null=True,
-    )
-
     class Meta:
         model = RiskSettings
         fields = ["take_profit", "stop_loss"]
 
-    def validate_take_profit(self, value):
-        if value is not None and value <= 0:
-            raise serializers.ValidationError("Take profit must be greater than 0")
-        return value
-
-    def validate_stop_loss(self, value):
-        if value is not None and value <= 0:
-            raise serializers.ValidationError("Stop loss must be greater than 0")
-        return value

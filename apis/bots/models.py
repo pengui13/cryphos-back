@@ -1,4 +1,4 @@
-from datetime import timedelta
+from decimal import Decimal
 
 from assets.models import AssetCryptoCoin
 from django.conf import settings
@@ -6,129 +6,13 @@ from django.contrib.postgres.fields import ArrayField
 from django.core.exceptions import ValidationError
 from django.core.validators import MaxValueValidator, MinValueValidator
 from django.db import models
-from django.utils import timezone
 
 User = settings.AUTH_USER_MODEL
 
+_RISK_VALIDATORS = [MinValueValidator(Decimal("0.01")),
+                    MaxValueValidator(Decimal("100"))]
 
-class MainBotSettings(models.Model):
-    max_signals = models.IntegerField(default=50)
-    signals_left = models.IntegerField(default=50)
-    user = models.ForeignKey(
-        User,
-        on_delete=models.CASCADE,
-        related_name="bot_user_settings",
-        blank=True,
-        null=True,
-    )
-
-    class Meta:
-        db_table = "bot_settings"
-
-    def update_signals_left(self):
-
-        cutoff = timezone.now() - timedelta(hours=24)
-
-        user_bots = Bot.objects.filter(owner=self.user)
-
-        recent_count = BotSignal.objects.filter(bot__in=user_bots, created_at__gte=cutoff).count()
-
-        self.signals_left = max(self.max_signals - recent_count, 0)
-
-        self.save(update_fields=["signals_left"])
-        return self.signals_left
-
-
-class Bot(models.Model):
-    class VerificationStatus(models.TextChoices):
-        DRAFT = "draft", "Draft"
-        PENDING = "pending", "Pending Review"
-        APPROVED = "approved", "Approved"
-        REJECTED = "rejected", "Rejected"
-
-    name = models.CharField(max_length=255)
-    created_at = models.DateTimeField(auto_now_add=True)
-    owner = models.ForeignKey(
-        User, on_delete=models.CASCADE, related_name="bots_owner", blank=True, null=True
-    )
-    published = models.BooleanField(default=False)
-    verification_status = models.CharField(
-        max_length=20,
-        choices=VerificationStatus.choices,
-        default=VerificationStatus.DRAFT,
-    )
-    description = models.TextField(blank=True, null=True)
-    roi = models.DecimalField(max_digits=20, decimal_places=10, default=0)
-    pnl = models.DecimalField(max_digits=20, decimal_places=10, default=0)
-    accuracy = models.DecimalField(max_digits=20, decimal_places=10, default=0)
-    frequency = models.DecimalField(max_digits=20, decimal_places=10, default=0)
-    risk = models.DecimalField(max_digits=20, decimal_places=10, default=0)
-    last_heartbeat = models.DateTimeField(null=True, blank=True)
-    max_drawdown = models.DecimalField(max_digits=20, decimal_places=2, default=0)
-    runtime = models.BigIntegerField(default=0)
-    last_activated = models.DateTimeField(null=True, blank=True)
-    users = models.ManyToManyField(User, related_name="bots_users", blank=True, null=True)
-    intersection = models.BooleanField(default=False)
-    is_active = models.BooleanField(default=True)
-    bot_assets = models.ManyToManyField("assets.AssetCryptoCoin", related_name="bots", blank=True)
-
-    class Meta:
-        db_table = "bot"
-
-    def activate(self):
-        now = timezone.now()
-        self.is_active = True
-        self.last_activated = now
-        self.last_heartbeat = now
-        self.save(update_fields=["is_active", "last_activated", "last_heartbeat"])
-        return True
-
-    def deactivate(self):
-        if self.is_active and self.last_activated:
-            now = timezone.now()
-            session_runtime = int((now - self.last_activated).total_seconds())
-            self.runtime += session_runtime
-            self.is_active = False
-            self.last_activated = None
-            self.save(
-                update_fields=[
-                    "runtime",
-                    "is_active",
-                    "last_activated",
-                ]
-            )
-
-            return session_runtime
-        return 0
-
-    def __str__(self):
-        return f"{self.owner.email}"
-
-
-class RiskSettings(models.Model):
-    user = models.OneToOneField(User, on_delete=models.CASCADE, related_name="risk_settings")
-    take_profit = models.DecimalField(max_digits=5, decimal_places=2, null=True, blank=True)
-    stop_loss = models.DecimalField(max_digits=5, decimal_places=2, blank=True, null=True)
-
-
-class BotBalance(models.Model):
-    bot = models.ForeignKey(Bot, on_delete=models.CASCADE, related_name="balances")
-    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name="bot_balances")
-    initial_balance = models.DecimalField(max_digits=20, decimal_places=10, default=0)
-    current_balance = models.DecimalField(max_digits=20, decimal_places=10, default=0)
-    take_profit = models.DecimalField(max_digits=20, decimal_places=10, default=0)
-    stop_loss = models.DecimalField(max_digits=20, decimal_places=10, default=0)
-    unrealised_pnl = models.DecimalField(max_digits=20, decimal_places=10, default=0)
-
-    class Meta:
-        unique_together = ("bot", "user")
-
-    def __str__(self):
-        return f"{self.bot.name}"
-
-
-class BaseIndicator(models.Model):
-    INTERVAL_CHOICES = [
+INTERVALS = [
         ("1MIN", "1 minute"),
         ("5MIN", "5 minutes"),
         ("15MIN", "15 minutes"),
@@ -137,8 +21,81 @@ class BaseIndicator(models.Model):
         ("1DAY", "1 day"),
     ]
 
+
+class VerificationStatus(models.TextChoices):
+    DRAFT = "draft", "Draft"
+    PENDING = "pending", "Pending Review"
+    APPROVED = "approved", "Approved"
+    REJECTED = "rejected", "Rejected"
+
+
+class RiskSettings(models.Model):
+
+    user = models.OneToOneField(User, on_delete=models.CASCADE,
+                                related_name="risk_settings")
+    take_profit = models.DecimalField(
+        max_digits=5,
+        decimal_places=2,
+        null=True,
+        blank=True,
+        validators=_RISK_VALIDATORS,
+    )
+    stop_loss = models.DecimalField(
+        max_digits=5,
+        decimal_places=2,
+        null=True,
+        blank=True,
+        validators=_RISK_VALIDATORS,
+    )
+
+    def __str__(self):
+        return f"{self.user.email} | {self.take_profit} | {self.stop_loss}"
+
+    class Meta:
+        verbose_name = verbose_name_plural = "Risk Settings"
+
+
+class Bot(models.Model):
+
+    name = models.CharField(max_length=255)
+    created_at = models.DateTimeField(auto_now_add=True)
+    owner = models.ForeignKey(
+        User,
+        on_delete=models.CASCADE,
+        related_name="bots_owner",
+        blank=True, null=True
+    )
+    users = models.ManyToManyField(
+                User,
+                related_name="bots_users",
+                blank=True,
+                null=True)
+    verification_status = models.CharField(
+        max_length=20,
+        choices=VerificationStatus.choices,
+        default=VerificationStatus.DRAFT,
+    )
+    description = models.TextField(blank=True, null=True)
+    roi = models.DecimalField(max_digits=20,
+                              decimal_places=10,
+                              default=0)
+    published = models.BooleanField(default=False)
+    pnl = models.DecimalField(max_digits=20,
+                              decimal_places=10,
+                              default=0)
+    last_activated = models.DateTimeField(null=True, blank=True)
+    bot_assets = models.ManyToManyField("assets.AssetCryptoCoin",
+                                        related_name="bots",
+                                        blank=True)
+
+    def __str__(self):
+        return f"{self.owner.email}"
+
+
+class BaseIndicator(models.Model):
+
     intervals = ArrayField(
-        models.CharField(max_length=10, choices=INTERVAL_CHOICES),
+        models.CharField(max_length=10, choices=INTERVALS),
         blank=True,
         default=list,
     )
@@ -148,7 +105,9 @@ class BaseIndicator(models.Model):
 
 
 class RsiIndicator(BaseIndicator):
-    bot = models.ForeignKey(Bot, related_name="rsi_indicators", on_delete=models.CASCADE)
+    bot = models.ForeignKey(Bot,
+                            related_name="rsi_indicators",
+                            on_delete=models.CASCADE)
     min = models.IntegerField(default=30)
     max = models.IntegerField(default=70)
     period = models.IntegerField(default=14)
@@ -158,7 +117,10 @@ class RsiIndicator(BaseIndicator):
         verbose_name_plural = "RSI Indicators"
 
     def __str__(self):
-        return f"{self.bot.owner.email}|min={self.min}|max={self.max}|period={self.period}|intervals={[f'{interval}|' for interval in self.intervals]}"
+        return f"{self.bot.owner.email} | \
+        min={self.min} | max={self.max} | \
+        period={self.period} | \
+        intervals={[f'| {interval} ' for interval in self.intervals]}|"
 
 
 def default_sr_intervals():
@@ -345,12 +307,18 @@ class FiboIndicator(BaseIndicator):
 
 
 class Signal(models.Model):
-    asset = models.ForeignKey(AssetCryptoCoin, on_delete=models.CASCADE)
+    asset = models.ForeignKey(AssetCryptoCoin,
+                              related_name="signal_asset",
+                              on_delete=models.CASCADE)
+    bot = models.ForeignKey(Bot,
+                            on_delete=models.CASCADE,
+                            related_name="bot_signals")
     open_price = models.DecimalField(max_digits=20, decimal_places=8)
-    close_price = models.DecimalField(max_digits=20, decimal_places=8, null=True, blank=True)
+    close_price = models.DecimalField(max_digits=20, decimal_places=8,
+                                      null=True, blank=True)
     is_long = models.BooleanField(default=True)
-    bot = models.ForeignKey(Bot, on_delete=models.CASCADE, related_name="bot_signals")
     is_open = models.BooleanField(default=True)
+
     created_at = models.DateTimeField(auto_now_add=True)
     closed_at = models.DateTimeField(blank=True, null=True)
 
@@ -375,7 +343,9 @@ class Signal(models.Model):
 
 class BollingerBandsIndicator(BaseIndicator):
     bot = models.ForeignKey(
-        Bot, related_name="bollinger_bands_indicators", on_delete=models.CASCADE
+        Bot,
+        related_name="bollinger_bands_indicators",
+        on_delete=models.CASCADE
     )
     period = models.IntegerField(default=20)
     std_dev = models.FloatField(default=2.0)
@@ -396,7 +366,8 @@ class FundingRate(models.Model):
 
 
 class AtrIndicator(BaseIndicator):
-    bot = models.ForeignKey(Bot, related_name="atr_indicators", on_delete=models.CASCADE)
+    bot = models.ForeignKey(Bot, related_name="atr_indicators",
+                            on_delete=models.CASCADE)
     period = models.IntegerField(default=14)
 
     class Meta:
@@ -405,7 +376,8 @@ class AtrIndicator(BaseIndicator):
 
 
 class ObvIndicator(BaseIndicator):
-    bot = models.ForeignKey(Bot, related_name="obv_indicators", on_delete=models.CASCADE)
+    bot = models.ForeignKey(Bot, related_name="obv_indicators",
+                            on_delete=models.CASCADE)
 
     class Meta:
         verbose_name = "OBV Indicator"
@@ -459,112 +431,6 @@ class MaValue(BaseIndicatorValue):
         ordering = ["quote__time"]
 
 
-class MacdValue(BaseIndicatorValue):
-    value = models.DecimalField(max_digits=20, decimal_places=10)
-    signal = models.DecimalField(max_digits=20, decimal_places=10)
-    histogram = models.DecimalField(max_digits=20, decimal_places=10)
-    indicator = models.ForeignKey(
-        MacdIndicator,
-        on_delete=models.SET_NULL,
-        null=True,
-        blank=True,
-        related_name="macd_values",
-    )
-
-    class Meta:
-        verbose_name = "MACD Value"
-        verbose_name_plural = "MACD Values"
-        ordering = ["quote__time"]
-
-
-class BollingerBandsValue(BaseIndicatorValue):
-    upper_band = models.DecimalField(max_digits=20, decimal_places=10)
-    lower_band = models.DecimalField(max_digits=20, decimal_places=10)
-    middle_band = models.DecimalField(max_digits=20, decimal_places=10)
-    indicator = models.ForeignKey(
-        BollingerBandsIndicator,
-        on_delete=models.SET_NULL,
-        null=True,
-        blank=True,
-        related_name="bollinger_bands_values",
-    )
-
-    class Meta:
-        verbose_name = "Bollinger Bands Value"
-        verbose_name_plural = "Bollinger Bands Values"
-        ordering = ["quote__time"]
-
-
-class AtrValue(BaseIndicatorValue):
-    value = models.DecimalField(max_digits=20, decimal_places=10)
-    indicator = models.ForeignKey(
-        AtrIndicator,
-        on_delete=models.SET_NULL,
-        null=True,
-        blank=True,
-        related_name="atr_values",
-    )
-
-    class Meta:
-        verbose_name = "ATR Value"
-        verbose_name_plural = "ATR Values"
-        ordering = ["quote__time"]
-
-
-class ObvValue(BaseIndicatorValue):
-    value = models.DecimalField(max_digits=20, decimal_places=10)
-    indicator = models.ForeignKey(
-        ObvIndicator,
-        related_name="obv_values",
-        on_delete=models.SET_NULL,
-        null=True,
-        blank=True,
-    )
-
-    def __str__(self):
-        return f"{self.quote}"
-
-    class Meta:
-        verbose_name = "OBV Value"
-        verbose_name_plural = "OBV Values"
-        ordering = ["quote__time"]
-
-
-class BotSignal(models.Model):
-    bot = models.ForeignKey(Bot, on_delete=models.CASCADE, related_name="signals")
-    balance = models.ForeignKey(
-        BotBalance,
-        on_delete=models.CASCADE,
-        related_name="signals",
-        blank=True,
-        null=True,
-    )
-    asset = models.ForeignKey(
-        "assets.AssetCryptoCoin", on_delete=models.CASCADE, related_name="signals"
-    )
-    is_long = models.BooleanField(default=False)
-    status = models.CharField(max_length=10, default="Pending")
-
-    quantity = models.DecimalField(max_digits=20, decimal_places=8, null=True, blank=True)
-    entry_price = models.DecimalField(max_digits=20, decimal_places=10, null=True, blank=True)
-    exit_price = models.DecimalField(max_digits=20, decimal_places=10, null=True, blank=True)
-
-    created_at = models.DateTimeField(auto_now_add=True)
-    closed_at = models.DateTimeField(null=True, blank=True)
-
-    pnl = models.DecimalField(max_digits=20, decimal_places=10, default=0)
-    roi = models.DecimalField(max_digits=10, decimal_places=2, default=0)
-
-    class Meta:
-        verbose_name = "Bot Signal"
-        verbose_name_plural = "Bot Signals"
-        ordering = ["-created_at"]
-
-    def __str__(self):
-        signal_direction = "BUY" if self.is_long else "SELL"
-        return f"{self.bot.name} - {signal_direction} - {self.status}"
-
-
 class BotStat(models.Model):
     bot = models.ForeignKey(Bot, on_delete=models.CASCADE, related_name="stats")
     pnl = models.DecimalField(max_digits=20, decimal_places=2, default=0)
@@ -575,12 +441,4 @@ class BotStat(models.Model):
         db_table = "bot_stats"
 
 
-class UserBalance(models.Model):
-    quantity = models.DecimalField(max_digits=15, decimal_places=8, default=0)
-    user = models.ForeignKey(
-        User,
-        on_delete=models.CASCADE,
-        related_name="user_balance",
-        blank=True,
-        null=True,
-    )
+

@@ -141,7 +141,8 @@ CHANNEL_LAYERS = {
     "default": {
         "BACKEND": "channels_redis.core.RedisChannelLayer",
         "CONFIG": {
-            "hosts": [(os.getenv("REDIS_HOST", "redis"), int(os.getenv("REDIS_PORT", "6379")))],
+            "hosts": [(os.getenv("REDIS_HOST", "redis"),
+                       int(os.getenv("REDIS_PORT", "6379")))],
         },
     },
 }
@@ -164,10 +165,12 @@ TEMPLATES = [
 WSGI_APPLICATION = "apis.wsgi.application"
 ASGI_APPLICATION = "apis.asgi.application"
 
+REDIS_URL = "redis://redis:6379/1"
+
 CACHES = {
     "default": {
         "BACKEND": "django.core.cache.backends.redis.RedisCache",
-        "LOCATION": "redis://redis:6379/1",
+        "LOCATION": REDIS_URL,
     }
 }
 
@@ -212,7 +215,6 @@ CELERY_RESULT_SERIALIZER = "json"
 TIME_ZONE = "Europe/Berlin"
 
 USE_I18N = True
-
 USE_TZ = True
 
 STATIC_URL = "static/"
