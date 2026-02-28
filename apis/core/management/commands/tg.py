@@ -1,4 +1,3 @@
-import logging
 
 from asgiref.sync import sync_to_async
 from django.conf import settings
@@ -12,14 +11,10 @@ from telegram.ext import (
     MessageHandler,
     filters,
 )
-
+from loguru import logger
 User = get_user_model()
 
-logging.basicConfig(
-    format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
-    level=logging.INFO,
-)
-logger = logging.getLogger(__name__)
+
 
 
 class Command(BaseCommand):

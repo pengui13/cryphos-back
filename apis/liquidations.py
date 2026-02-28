@@ -1,12 +1,12 @@
 import asyncio
 import json
 from datetime import UTC, datetime
-
 import redis.asyncio as redis
 import websockets
+from django.conf import settings
 
 OKX_URL = "wss://ws.okx.com:8443/ws/v5/public"
-REDIS_URL = "redis://redis:6379/1"
+
 
 
 BUCKET_SIZES = {
@@ -25,7 +25,7 @@ class LiquidationFetcher:
 
     async def start(self):
         self.running = True
-        self.redis = await redis.from_url(REDIS_URL)
+        self.redis = await redis.from_url(settings.REDIS_URL)
         print("Connected to Redis")
 
         while self.running:

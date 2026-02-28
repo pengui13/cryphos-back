@@ -1,6 +1,5 @@
-import logging
 from decimal import Decimal
-
+from loguru import logger
 import pandas as pd
 import redis
 import ta.momentum
@@ -8,7 +7,6 @@ import ta.trend
 import ta.volatility
 from django.conf import settings
 
-logger = logging.getLogger(__name__)
 
 
 class RedisService:

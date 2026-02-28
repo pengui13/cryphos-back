@@ -34,13 +34,14 @@ class Quote(models.Model):
     ask = models.DecimalField(max_digits=20, decimal_places=8)
     lp = models.DecimalField(max_digits=20, decimal_places=8, default=0, null=True, blank=True)
     volume = models.DecimalField(max_digits=20, decimal_places=8)
-
     open_price = models.DecimalField(max_digits=20, decimal_places=10)
     high_price = models.DecimalField(max_digits=20, decimal_places=10)
     low_price = models.DecimalField(max_digits=20, decimal_places=10)
     prev_close_price = models.DecimalField(max_digits=20, decimal_places=10, blank=True, null=True)
-    max_24h = models.DecimalField(max_digits=20, decimal_places=10, null=True, blank=True)
-    min_24h = models.DecimalField(max_digits=20, decimal_places=10, null=True, blank=True)
+    max_24h = models.DecimalField(max_digits=20, decimal_places=10,
+                                  null=True, blank=True)
+    min_24h = models.DecimalField(max_digits=20, decimal_places=10,
+                                  null=True, blank=True)
     is_closed = models.BooleanField(default=False)
     time = models.DateTimeField(auto_now_add=True)
     perc_24 = models.FloatField(default=0)

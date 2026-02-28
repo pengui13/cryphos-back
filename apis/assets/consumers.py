@@ -2,27 +2,21 @@ import asyncio
 
 import redis.asyncio as redis
 from channels.generic.websocket import AsyncWebsocketConsumer
-
-REDIS_URL = "redis://redis:6379/1"
+from django.conf import settings
 
 
 class LiquidationConsumer(AsyncWebsocketConsumer):
     async def connect(self):
         await self.accept()
-
-        self.redis = await redis.from_url(REDIS_URL)
-
+        self.redis = await redis.from_url(settings.REDIS_URL)
         await self._send_recent_liquidations()
-
         self.pubsub = self.redis.pubsub()
         await self.pubsub.subscribe("liquidations")
         self.listener_task = asyncio.create_task(self._listen_redis())
 
     async def _send_recent_liquidations(self):
-        """Отправляем последние 50 ликвидаций при подключении"""
         try:
             recent = await self.redis.lrange("recent_liquidations", 0, 49)
-
             for item in reversed(recent):
                 data = item.decode() if isinstance(item, bytes) else item
                 await self.send(text_data=data)

@@ -1,6 +1,5 @@
-import logging
 from decimal import Decimal
-
+from loguru import logger
 import redis
 import requests
 from assets.models import AssetCryptoCoin, HistQuotes
@@ -16,7 +15,6 @@ from django.utils import timezone
 from core.fetching_service import FetchingService
 
 User = get_user_model()
-logger = logging.getLogger(__name__)
 CRYPHOS_URL = "https://cryphos.com"
 FUNDING_URL = "https://fapi.binance.com/fapi/v1/fundingRate"
 FNG_URL = "https://api.alternative.me/fng/"
@@ -117,7 +115,7 @@ def parse_funding_rate():
                 },
             )
         except Exception as e:
-            logging.error(e)
+            logger.error(e)
 
 
 @shared_task()

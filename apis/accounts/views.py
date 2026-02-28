@@ -1,5 +1,4 @@
 import random
-
 import requests
 import stripe
 import throttling as thrott
@@ -10,8 +9,7 @@ from django.utils import timezone
 from rest_framework import generics, status
 from rest_framework.decorators import api_view, authentication_classes, permission_classes
 from rest_framework.generics import RetrieveAPIView
-from rest_framework.permissions import AllowAny as Aa
-from rest_framework.permissions import IsAuthenticated as Ia
+from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
 from rest_framework_simplejwt.serializers import TokenRefreshSerializer
@@ -32,7 +30,7 @@ stripe.api_key = settings.STRIPE_SECRET_KEY
 
 
 @api_view(["POST"])
-@permission_classes([Ia])
+@permission_classes([IsAuthenticated])
 def create_checkout_session(request):
     """
     Creates a Stripe Checkout Session for a subscription
@@ -96,7 +94,7 @@ def create_checkout_session(request):
 
 
 @api_view(["POST"])
-@permission_classes([Ia])
+@permission_classes([IsAuthenticated])
 def create_billing_portal_session(request):
     """
     Lets the user manage card/cancel themselves.
@@ -116,7 +114,7 @@ def create_billing_portal_session(request):
 
 
 @api_view(["GET"])
-@permission_classes([Ia])
+@permission_classes([IsAuthenticated])
 def billing_me(request):
     """
     Returns current user's billing/subscription info.
@@ -140,7 +138,7 @@ def billing_me(request):
 
 
 @api_view(["POST"])
-@permission_classes([Aa])
+@permission_classes([AllowAny])
 @authentication_classes([])
 def stripe_webhook(request):
     payload = request.body
@@ -297,7 +295,7 @@ def stripe_webhook(request):
 
 
 class RegisterStartView(generics.CreateAPIView):
-    permission_classes = [Aa]
+    permission_classes = [AllowAny]
     serializer_class = RegisterStartSerializer
 
     def create(self, request, *args, **kwargs):
@@ -315,7 +313,7 @@ class GetUserTelegram(RetrieveAPIView):
 
 
 class RegisterVerifyView(generics.CreateAPIView):
-    permission_classes = [Aa]
+    permission_classes = [AllowAny]
     serializer_class = RegisterVerifySerializer
 
     def create(self, request, *args, **kwargs):
@@ -326,7 +324,7 @@ class RegisterVerifyView(generics.CreateAPIView):
 
 
 class RegisterResendView(generics.CreateAPIView):
-    permission_classes = [Aa]
+    permission_classes = [AllowAny]
     serializer_class = RegisterResendSerializer
 
     def create(self, request, *args, **kwargs):
@@ -338,7 +336,7 @@ class RegisterResendView(generics.CreateAPIView):
 
 class LoginView(generics.GenericAPIView):
     serializer_class = LoginSerializer
-    permission_classes = [Aa]
+    permission_classes = [AllowAny]
     throttle_classes = [thrott.AuthTrottle]
 
     def post(self, request, *args, **kwargs):
@@ -350,7 +348,7 @@ class LoginView(generics.GenericAPIView):
 class RegisterView(generics.CreateAPIView):
     """Simple registration without email verification - returns tokens"""
 
-    permission_classes = [Aa]
+    permission_classes = [AllowAny]
 
     def create(self, request, *args, **kwargs):
         email = request.data.get("email", "").strip()
@@ -404,7 +402,7 @@ class RegisterView(generics.CreateAPIView):
 
 
 class RefreshTokenView(TokenRefreshView):
-    permission_classes = [Aa]
+    permission_classes = [AllowAny]
     serializer_class = TokenRefreshSerializer
 
     def post(self, request, *args, **kwargs):
@@ -445,7 +443,7 @@ def send_telegram_reset_code(chat_id, code):
 
 
 class ResetStartView(APIView):
-    permission_classes = [Aa]
+    permission_classes = [AllowAny]
 
     def post(self, request):
         email = request.data.get("email", "").strip()
@@ -481,7 +479,7 @@ class ResetStartView(APIView):
 class ResetVerifyView(APIView):
     """Verify code and set new password"""
 
-    permission_classes = [Aa]
+    permission_classes = [AllowAny]
 
     def post(self, request):
         email = request.data.get("email", "").strip()
@@ -517,11 +515,9 @@ class ResetVerifyView(APIView):
                 {"detail": "Invalid or expired code"}, status=status.HTTP_400_BAD_REQUEST
             )
 
-        # Mark code as used
         reset_code.is_used = True
         reset_code.save()
 
-        # Set new password
         user.set_password(password)
         user.save()
 
