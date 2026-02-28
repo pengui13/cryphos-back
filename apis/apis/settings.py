@@ -79,8 +79,10 @@ STORAGES = {
             "secret_key": os.environ["B2_APP_KEY"],
             "bucket_name": os.environ["B2_BUCKET_NAME"],
             "endpoint_url": os.environ["B2_ENDPOINT"],
+            "region_name": "eu-central-003",
             "default_acl": "private",
-        },
+            "signature_version": "s3v4",   
+            },
     },
 }
 
