@@ -75,7 +75,7 @@ STORAGES = {
     "dbbackup": {
         "BACKEND": "storages.backends.s3boto3.S3Boto3Storage",
         "OPTIONS": {
-            "access_key": os.environ["B2_APP_KEY_ID"],
+            "access_key": os.environ["B2_KEY_ID"],
             "secret_key": os.environ["B2_APP_KEY"],
             "bucket_name": os.environ["B2_BUCKET_NAME"],
             "endpoint_url": os.environ["B2_ENDPOINT"],
