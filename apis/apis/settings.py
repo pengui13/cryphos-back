@@ -47,13 +47,6 @@ INSTALLED_APPS = [
 ]
 
 
-DBBACKUP_STORAGE = "storages.backends.s3boto3.S3Boto3Storage"
-DBBACKUP_STORAGE_OPTIONS = {
-    "access_key": os.environ["B2_KEY_ID"],
-    "secret_key": os.environ["B2_APP_KEY"],
-    "bucket_name": "cryphos-backups",
-    "endpoint_url": "https://s3.eu-central-003.backblazeb2.com",
-}
 
 SPECTACULAR_SETTINGS = {
     "TITLE": "Cryphos API",
@@ -70,6 +63,28 @@ SPECTACULAR_SETTINGS = {
         }
     },
 }
+
+
+STORAGES = {
+    "default": {
+        "BACKEND": "django.core.files.storage.FileSystemStorage",
+    },
+    "staticfiles": {
+        "BACKEND": "django.contrib.staticfiles.storage.StaticFilesStorage",
+    },
+    "dbbackup": {
+        "BACKEND": "storages.backends.s3boto3.S3Boto3Storage",
+        "OPTIONS": {
+            "access_key": os.environ["B2_APP_KEY_ID"],
+            "secret_key": os.environ["B2_APP_KEY"],
+            "bucket_name": os.environ["B2_BUCKET_NAME"],
+            "endpoint_url": os.environ["B2_ENDPOINT"],
+            "default_acl": "private",
+        },
+    },
+}
+
+
 REST_FRAMEWORK = {
     "DEFAULT_THROTTLE_RATES": {"anon": "300/day", "user": "5000/day", "auth": "10/minute"},
     "DEFAULT_AUTHENTICATION_CLASSES": (
