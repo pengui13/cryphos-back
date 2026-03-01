@@ -10,8 +10,7 @@ class UserAdmin(admin.ModelAdmin):
 
 @admin.register(BillingProfile)
 class BillingProfileAdmin(admin.ModelAdmin):
-    list_display = ('user', 'status', 'is_active', 'current_period_end',
+    list_display = ('user', 'status', 'current_period_end',
                     'cancel_at_period_end')
-    list_filter = ('is_active',)
     search_fields = ('user__email',)
     readonly_fields = ('created_at', 'updated_at')
