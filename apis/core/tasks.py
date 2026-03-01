@@ -12,7 +12,7 @@ from django.core.cache import cache
 from django.core.management import call_command
 from django.utils import timezone
 from core.fetching_service import FetchingService
-from task_utils import TaskUtilsService
+from .task_utils import TaskUtilsService
 from bots.utils import RedisService
 from itertools import chain
 User = get_user_model()

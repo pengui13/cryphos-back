@@ -13,18 +13,7 @@ class TaskUtilsService:
     def fetch_last_prices(assets: QuerySet[AssetCryptoCoin]) -> list[tuple[AssetCryptoCoin, dict]]:
         results = []
 
-        with requests.Session() as session:
-            for asset in assets:
-                try:
-                    response = session.get(settings.FUNDING_URL,
-                                           params={"symbol": f"{asset.symbol}USDT",
-                                           "limit": 1},
-                                           timeout=10)
-                    response.raise_for_status()
-                    result = response.json()[0]
-                    results.append((asset, result))
-                except Exception as e:
-                    logger.error(f"Funding rate error for {asset.symbol}: {e}")
+
         return results
     
     @classmethod
