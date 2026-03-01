@@ -2,7 +2,7 @@ import asyncio
 import json
 import time
 from collections.abc import Iterable
-
+from loguru import logger
 import redis.asyncio as redis
 import websockets
 
@@ -60,12 +60,12 @@ SYMBOLS = [
     "icpusdt",
 ]
 
-LAST_HASH = "prices:last"
-TS_HASH = "prices:ts"
+
 # TODO Rename it , because currently naming price:volume is a piece of shit
 
 REDIS_URL = "redis://redis:6379/1"
-
+LAST_HASH = "prices:last"
+TS_HASH = "prices:ts"
 
 def make_url(symbols: Iterable[str]) -> str:
     streams = "/".join(f"{s}@miniTicker" for s in symbols)
@@ -102,7 +102,7 @@ async def collector():
                     await pipe.execute()
 
         except Exception as e:
-            print(e)
+            logger.error(e)
             await asyncio.sleep(backoff)
             backoff = min(backoff * 2, 30)
 

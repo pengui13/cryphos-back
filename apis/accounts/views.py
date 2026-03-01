@@ -5,6 +5,7 @@ import throttling as thrott
 from bots.models import Bot
 from django.conf import settings
 from django.contrib.auth import get_user_model
+from loguru import logger
 from django.utils import timezone
 from rest_framework import generics, status
 from rest_framework.decorators import api_view, authentication_classes, permission_classes
@@ -53,7 +54,7 @@ def create_checkout_session(request):
         try:
             stripe.Customer.retrieve(customer_id)
         except Exception as e:
-            print(e)
+            logger.error(e)
             customer_id = None
 
     if not customer_id:
@@ -84,7 +85,7 @@ def create_checkout_session(request):
             cancel_url=f"{settings.FRONTEND_URL}/billing/cancel",
         )
     except Exception as e:
-        print("Stripe error in create_checkout_session:", e)
+        logger.error("Stripe error in create_checkout_session:", e)
         return Response(
             {"error": "Failed to create Stripe Checkout Session"},
             status=status.HTTP_400_BAD_REQUEST,
@@ -147,12 +148,11 @@ def stripe_webhook(request):
     try:
         event = stripe.Webhook.construct_event(payload, sig, settings.STRIPE_WEBHOOK_SECRET)
     except Exception as e:
-        print("WEBHOOK ERROR (signature or payload):", e)
+        logger.error("WEBHOOK ERROR (signature or payload):", e)
         return Response(status=status.HTTP_400_BAD_REQUEST)
 
     etype = event["type"]
     data = event["data"]["object"]
-    print("WEBHOOK EVENT TYPE:", etype, "ID:", data.get("id"))
 
     def update_from_subscription(sub, session_meta=None):
         customer_id = sub.get("customer")
@@ -162,23 +162,18 @@ def stripe_webhook(request):
             for k, v in session_meta.items():
                 meta.setdefault(k, v)
 
-        print("SUB META:", meta, "customer:", customer_id, "sub_id:", sub_id)
 
         bp = None
 
         bp_id = meta.get("billing_profile_id")
         if bp_id:
             bp = BillingProfile.objects.filter(id=bp_id).first()
-            if bp:
-                print("FOUND BP BY ID:", bp_id)
 
         if not bp:
             bp = (
                 BillingProfile.objects.filter(stripe_subscription_id=sub_id).first()
                 or BillingProfile.objects.filter(stripe_customer_id=customer_id).first()
             )
-            if bp:
-                print("FOUND BP BY SUB/CUSTOMER")
 
         user = None
         user_id = meta.get("user_id")
@@ -186,16 +181,15 @@ def stripe_webhook(request):
             try:
                 user = User.objects.get(id=user_id)
                 bp, _ = BillingProfile.objects.get_or_create(user=user)
-                print("CREATED/FOUND BP BY USER_ID:", user_id)
             except User.DoesNotExist:
-                print("User with id from meta not found:", user_id)
+                logger.error("User with id from meta not found:", user_id)
 
         if not bp and customer_id:
             try:
                 cust = stripe.Customer.retrieve(customer_id)
                 email = cust.get("email")
             except Exception as e:
-                print("Could not retrieve customer in webhook:", e)
+                logger.error("Could not retrieve customer in webhook:", e)
                 email = None
 
             if email:
@@ -205,18 +199,7 @@ def stripe_webhook(request):
                     if not bp.stripe_customer_id:
                         bp.stripe_customer_id = customer_id
                         bp.save(update_fields=["stripe_customer_id"])
-                    print("CREATED/FOUND BP BY EMAIL:", email)
 
-        if not bp:
-            print(
-                "No BillingProfile found for subscription",
-                sub_id,
-                "customer",
-                customer_id,
-                "meta:",
-                meta,
-            )
-            return
 
         items = sub.get("items", {}).get("data", [])
         price = items[0]["price"] if items else {}
@@ -241,13 +224,10 @@ def stripe_webhook(request):
             u.tg_approved = new_flag
             u.save(update_fields=["tg_approved"])
 
-        print(
-            f"Updated BillingProfile for user {u.id}: status={bp.status}, is_active={bp.is_active}"
-        )
+
 
     if etype == "checkout.session.completed":
         session_meta = data.get("metadata", {}) or {}
-        print("SESSION META:", session_meta)
 
         if data.get("customer") and data.get("subscription"):
             sub = stripe.Subscription.retrieve(data["subscription"])
@@ -264,22 +244,18 @@ def stripe_webhook(request):
 
     elif etype == "payment_intent.succeeded":
         invoice_id = data.get("invoice")
-        print("payment_intent.succeeded invoice:", invoice_id)
 
         if invoice_id:
             try:
                 inv = stripe.Invoice.retrieve(invoice_id)
                 sub_id = inv.get("subscription")
-                print("invoice.subscription:", sub_id)
                 if sub_id:
                     sub = stripe.Subscription.retrieve(sub_id)
                     update_from_subscription(sub)
-                else:
-                    print("No subscription on invoice")
+
             except Exception as e:
-                print("Error retrieving invoice/subscription:", e)
-        else:
-            print("payment_intent without invoice (probably one-off payment)")
+                logger.error("Error retrieving invoice/subscription:", e)
+
 
     elif etype == "invoice.payment_failed":
         bp = BillingProfile.objects.filter(stripe_customer_id=data.get("customer")).first()
@@ -289,7 +265,6 @@ def stripe_webhook(request):
             if bp.user.tg_approved:
                 bp.user.tg_approved = False
                 bp.user.save(update_fields=["tg_approved"])
-            print("Marked subscription as past_due for user", bp.user.id)
 
     return Response(status=status.HTTP_200_OK)
 
@@ -410,7 +385,7 @@ class RefreshTokenView(TokenRefreshView):
         try:
             serializer.is_valid(raise_exception=True)
         except Exception as e:
-            print(e)
+            logger.error(e)
             return Response({"error": "Invalid refresh token"}, status=status.HTTP_401_UNAUTHORIZED)
 
         return Response(serializer.validated_data, status=status.HTTP_200_OK)
@@ -439,7 +414,7 @@ def send_telegram_reset_code(chat_id, code):
             },
         )
     except Exception as e:
-        print(f"Failed to send Telegram reset code: {e}")
+        logger.error(f"Failed to send Telegram reset code: {e}")
 
 
 class ResetStartView(APIView):

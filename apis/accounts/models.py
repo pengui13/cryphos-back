@@ -4,9 +4,6 @@ from django.utils import timezone
 
 
 class User(AbstractUser):
-    """
-    Custom user model extending Django's AbstractUser
-    """
 
     email = models.EmailField(unique=True)
     tg_nickname = models.CharField(default="", null=True, blank=True)

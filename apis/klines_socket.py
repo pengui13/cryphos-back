@@ -1,7 +1,7 @@
 import asyncio
 import json
 import random
-
+from loguru import logger
 import redis.asyncio as redis
 import websockets
 
@@ -114,7 +114,7 @@ async def consume_interval(symbols, interval: str, r):
             raise
         except Exception as e:
             sleep_for = backoff + random.random() * 0.25
-            print(f"[{interval}] WS error {type(e).__name__}: {e}. Reconnect in {sleep_for:.2f}s")
+            logger.info(f"[{interval}] WS error {type(e).__name__}: {e}. Reconnect in {sleep_for:.2f}s")
             await asyncio.sleep(sleep_for)
             backoff = min(backoff * 2, 60.0)
 

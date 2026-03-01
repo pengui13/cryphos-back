@@ -1,5 +1,5 @@
 import asyncio
-
+from loguru import logger
 import redis.asyncio as redis
 from channels.generic.websocket import AsyncWebsocketConsumer
 from django.conf import settings
@@ -21,7 +21,7 @@ class LiquidationConsumer(AsyncWebsocketConsumer):
                 data = item.decode() if isinstance(item, bytes) else item
                 await self.send(text_data=data)
         except Exception as e:
-            print(f"Error sending recent liquidations: {e}")
+            logger.error(f"Error sending recent liquidations: {e}")
 
     async def disconnect(self, code):
         if hasattr(self, "listener_task"):

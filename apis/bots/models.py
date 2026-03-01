@@ -88,6 +88,10 @@ class Bot(models.Model):
                                         related_name="bots",
                                         blank=True)
 
+    @property
+    def fibo_indicator(self):
+        return self.fibo_indicators.first()
+    
     def __str__(self):
         return f"{self.owner.email}"
 
@@ -359,10 +363,14 @@ class BollingerBandsIndicator(BaseIndicator):
 
 
 class FundingRate(models.Model):
-    asset = models.ForeignKey(AssetCryptoCoin, on_delete=models.CASCADE)
+    asset = models.ForeignKey(AssetCryptoCoin, related_name='assets_funding',
+                              on_delete=models.CASCADE)
     rate = models.DecimalField(max_digits=18, decimal_places=8)
     funding_time = models.BigIntegerField()
     exchange = models.CharField(max_length=100)
+
+    class Meta:
+        unique_together = ["asset", "exchange"]
 
 
 class AtrIndicator(BaseIndicator):

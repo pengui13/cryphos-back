@@ -6,7 +6,8 @@ import ta.momentum
 import ta.trend
 import ta.volatility
 from django.conf import settings
-
+from functools import partial
+from typing import Callable, Optional, T
 
 
 class RedisService:
@@ -16,17 +17,38 @@ class RedisService:
 
     @classmethod
     def get_values(cls,
-                   list_of_values: list[str]) -> dict[str, str | None]:
-        results = {}
-        for value in list_of_values:
-            result = cls.r.get(value) or None
-            results[value] = result
+                   list_of_fields: list[str],
+                   key_of_map: str = None,
+                   transform: Optional[Callable] = None) -> dict:
+        with cls.r.pipeline() as pipe:
+            extract_function = partial(pipe.hget, key_of_map) \
+                               if key_of_map else pipe.get
+            [extract_function(field) for field in list_of_fields]
+            results = dict(zip(list_of_fields, pipe.execute()))
+        if transform:
+            return {k: transform(v) for k, v in results.items()
+                    if v is not None}
         return results
 
+    @classmethod
+    def set_values(cls,
+                   list_of_fields: list[str],
+                   list_of_values: list[str],
+                   key_of_map: str = None,
+                   transform: Optional[Callable] = None) -> None:
+        if transform:
+            list_of_values = list(map(transform, list_of_values))
+        with cls.r.pipeline() as pipe:
+            extract_function = partial(pipe.hset, key_of_map) \
+                    if key_of_map else pipe.set
+            [extract_function(field, value) for field, value in
+             zip(list_of_fields, list_of_values)]
+            pipe.execute()
 
 class IndicatorsCalc:
 
-    def calculate_rsi(self, prices: list[Decimal], period: int = 14) -> float | None:
+    def calculate_rsi(self, prices: list[Decimal],
+                      period: int = 14) -> float | None:
         if len(prices) < period + 1:
             return None
 

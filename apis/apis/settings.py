@@ -184,6 +184,13 @@ ASGI_APPLICATION = "apis.asgi.application"
 
 REDIS_URL = "redis://redis:6379/1"
 
+CRYPHOS_LABEL = "Cryphos"
+CRYPHOS_URL = "https://cryphos.com"
+FUNDING_URL = "https://fapi.binance.com/fapi/v1/fundingRate"
+KLINES_URL = "https://api.binance.com/api/v3/klines"
+
+FNG_URL = "https://api.alternative.me/fng/"
+
 CACHES = {
     "default": {
         "BACKEND": "django.core.cache.backends.redis.RedisCache",

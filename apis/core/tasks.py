@@ -3,7 +3,7 @@ from loguru import logger
 import redis
 import requests
 from assets.models import AssetCryptoCoin, HistQuotes
-from bots.models import Bot, FundingRate, RiskSettings, Signal
+from bots.models import Bot, FundingRate, RiskSettings, Signal, FiboIndicator
 from bots.utils import IndicatorsCalc
 from celery import shared_task
 from django.conf import settings
@@ -11,15 +11,13 @@ from django.contrib.auth import get_user_model
 from django.core.cache import cache
 from django.core.management import call_command
 from django.utils import timezone
-
 from core.fetching_service import FetchingService
-
+from task_utils import TaskUtilsService
+from bots.utils import RedisService
+from itertools import chain
 User = get_user_model()
-CRYPHOS_URL = "https://cryphos.com"
-FUNDING_URL = "https://fapi.binance.com/fapi/v1/fundingRate"
-FNG_URL = "https://api.alternative.me/fng/"
 
-CRYPHOS_LABEL = "Cryphos"
+
 INTERVAL_SEC = {"1MIN": 60, "5MIN": 300, "15MIN": 900, "30MIN": 1800, "1HRS": 3600}
 
 r = redis.from_url("redis://redis:6379/1", decode_responses=True)
@@ -27,37 +25,43 @@ r = redis.from_url("redis://redis:6379/1", decode_responses=True)
 
 @shared_task
 def calculate_swing():
-    bots = Bot.objects.prefetch_related("fibo_indicators", "bot_assets")
-    for bot in bots:
-        fibo = bot.fibo_indicators.first()
-        if not fibo:
-            continue
-        assets = bot.bot_assets.all()
-        for interval in fibo.intervals:
+    indicators = FiboIndicator.objects.only('intervals', 'period')
+    assets = AssetCryptoCoin.objects \
+        .filter(bots__fibo_indicators__isnull=False) \
+        .only('id', 'symbol').distinct()
+
+    list_of_fields = [f"{asset.symbol}USDT" for asset in assets]
+    prices = RedisService.get_values(list_of_fields,
+                                     key_of_map="prices:last",
+                                     transform=Decimal)
+
+    up_trends, highs, lows, prefixes = [], [], [], []
+
+    for indicator in indicators:
+        for interval in indicator.intervals:
             for asset in assets:
-                last_price = r.hget("prices:last", f"{asset.symbol.upper()}USDT")
-                if last_price is None:
+                last_price = prices.get(f"{asset.symbol}USDT")
+                if not last_price:
                     continue
-                last_price = Decimal(
-                    last_price.decode()
-                    if isinstance(last_price, (bytes, bytearray))
-                    else last_price
-                )
-                qs = (
-                    HistQuotes.objects.filter(symbol=asset, interval=interval)
+                closes = list(
+                    HistQuotes.objects.filter(symbol=asset.id, interval=interval)
                     .order_by("-time")
-                    .values_list("close_price", flat=True)[: fibo.period]
+                    .values_list("close_price", flat=True)[:indicator.period]
                 )
-                closes = list(qs)
                 if not closes:
                     continue
                 series = list(reversed(closes)) + [last_price]
                 high, low = max(series), min(series)
                 up_trend = series.index(high) > series.index(low)
                 prefix = f"{interval}:{asset.symbol}"
-                r.hset("up_trend", prefix, int(up_trend))
-                r.hset("high", prefix, str(high))
-                r.hset("low", prefix, str(low))
+                prefixes.append(prefix)
+                up_trends.append(int(up_trend))
+                highs.append(str(high))
+                lows.append(str(low))
+
+    RedisService.set_values(prefixes, up_trends, key_of_map="up_trend")
+    RedisService.set_values(prefixes, highs, key_of_map="high")
+    RedisService.set_values(prefixes, lows, key_of_map="low")
 
 
 @shared_task
@@ -92,30 +96,18 @@ def fetch_ohlcv_for_interval(interval: str):
 
 @shared_task()
 def parse_fng():
-    response = requests.get(FNG_URL)
+    response = requests.get(settings.FNG_URL)
+    response.raise_for_status()
     result = response.json()["data"][0]
     r.set("fng", int(result["value"]))
     r.set("fng_class", result["value_classification"])
 
 
 @shared_task
-def parse_funding_rate():
-    assets = AssetCryptoCoin.objects.all()
-    for asset in assets:
-        try:
-            symbol = asset.symbol.upper()
-            response = requests.get(f"{FUNDING_URL}?symbol={symbol}USDT&limit=1")
-            result = response.json()[0]
-            FundingRate.objects.update_or_create(
-                asset=asset,
-                exchange="binance",
-                defaults={
-                    "rate": Decimal(result["fundingRate"]),
-                    "funding_time": result["fundingTime"],
-                },
-            )
-        except Exception as e:
-            logger.error(e)
+def parse_funding_rate() -> None:
+    assets = AssetCryptoCoin.objects.only('id', 'symbol')
+    results = TaskUtilsService.fetch_funding_rates(assets)
+    TaskUtilsService.save_funding_rates(results)
 
 
 @shared_task()
@@ -351,7 +343,7 @@ def build_close_signal_message(signal, roi: float, close_reason: str | None) -> 
 
 <code>────────────────────</code>
 🤖 {bot_name}
-🔗 <a href="{CRYPHOS_URL}">{CRYPHOS_LABEL}</a>
+🔗 <a href="{settings.CRYPHOS_URL}">{CRYPHOS_LABEL}</a>
 """.strip()
 
     return msg

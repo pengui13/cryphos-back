@@ -4,6 +4,7 @@ from datetime import UTC, datetime
 import redis.asyncio as redis
 import websockets
 from django.conf import settings
+from loguru import logger
 
 OKX_URL = "wss://ws.okx.com:8443/ws/v5/public"
 
@@ -26,13 +27,12 @@ class LiquidationFetcher:
     async def start(self):
         self.running = True
         self.redis = await redis.from_url(settings.REDIS_URL)
-        print("Connected to Redis")
 
         while self.running:
             try:
                 await self._connect_and_listen()
             except Exception as e:
-                print(f"Error: {e}, reconnecting in 5s...")
+                logger.error(f"Error: {e}, reconnecting in 5s...")
                 await asyncio.sleep(5)
 
     async def stop(self):
@@ -47,7 +47,6 @@ class LiquidationFetcher:
                 "args": [{"channel": "liquidation-orders", "instType": "SWAP"}],
             }
             await ws.send(json.dumps(subscribe_msg))
-            print("Subscribed to OKX liquidations")
 
             asyncio.create_task(self._ping_loop(ws))
 
@@ -60,7 +59,7 @@ class LiquidationFetcher:
                 await ws.send("ping")
                 await asyncio.sleep(20)
             except Exception as e:
-                print(e)
+                logger.error(e)
                 break
 
     async def _handle_message(self, message: str | bytes):
@@ -70,7 +69,7 @@ class LiquidationFetcher:
         try:
             data = json.loads(message)
         except Exception as e:
-            print(e)
+            logger.error(e)
             return
 
         if "data" not in data:
@@ -135,7 +134,6 @@ class LiquidationFetcher:
 
         await pipe.execute()
 
-        print(f"{symbol} {liq_type.upper()} ${usd_value:,.0f} @ {price:,.2f}")
 
 
 async def main():
