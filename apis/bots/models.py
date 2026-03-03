@@ -91,7 +91,7 @@ class Bot(models.Model):
     @property
     def fibo_indicator(self):
         return self.fibo_indicators.first()
-    
+
     def __str__(self):
         return f"{self.owner.email}"
 

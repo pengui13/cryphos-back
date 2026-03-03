@@ -10,4 +10,7 @@ class AssetCryptoCoinAdmin(admin.ModelAdmin):
     search_fields = ('symbol', 'name')
 
 
-admin.site.register(HistQuotes)
+@admin.register(HistQuotes)
+class HistQuotesAdmin(admin.ModelAdmin):
+    list_display = ('symbol', 'interval', 'close_price', 'rank')
+    search_fields = ('symbol',)

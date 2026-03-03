@@ -1,13 +1,13 @@
+from collections.abc import Callable
 from decimal import Decimal
-from loguru import logger
+from functools import partial
+
 import pandas as pd
 import redis
 import ta.momentum
 import ta.trend
 import ta.volatility
 from django.conf import settings
-from functools import partial
-from typing import Callable, Optional, T
 
 
 class RedisService:
@@ -19,7 +19,7 @@ class RedisService:
     def get_values(cls,
                    list_of_fields: list[str],
                    key_of_map: str = None,
-                   transform: Optional[Callable] = None) -> dict:
+                   transform: Callable | None = None) -> dict:
         with cls.r.pipeline() as pipe:
             extract_function = partial(pipe.hget, key_of_map) \
                                if key_of_map else pipe.get
@@ -35,7 +35,7 @@ class RedisService:
                    list_of_fields: list[str],
                    list_of_values: list[str],
                    key_of_map: str = None,
-                   transform: Optional[Callable] = None) -> None:
+                   transform: Callable | None = None) -> None:
         if transform:
             list_of_values = list(map(transform, list_of_values))
         with cls.r.pipeline() as pipe:
