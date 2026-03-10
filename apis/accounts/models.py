@@ -12,7 +12,8 @@ class User(AbstractUser):
 
     def __str__(self):
         return self.username
-
+    
+    
 
 SUB_STATUS_CHOICES = [
     ("incomplete", "incomplete"),

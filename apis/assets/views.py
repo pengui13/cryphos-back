@@ -1,14 +1,10 @@
-from rest_framework.permissions import AllowAny
-from rest_framework.response import Response
-from rest_framework.views import APIView
+from rest_framework.permissions import IsAuthenticated
+from rest_framework.generics import ListAPIView
+from .models import AssetCryptoCoin
+from .serializers import AssetsSerializer
 
-from assets.models import AssetCryptoCoin
 
-
-class GetAssets(APIView):
-    permission_classes = [AllowAny]
-
-    def get(self, request):
-        # assets = AssetCryptoCoin.objects.all()
-        # data = serializers.AssetsSerializer(assets, many=True).data
-        return Response({"assets": AssetCryptoCoin.objects.all().values_list("symbol", flat=True)})
+class GetAssets(ListAPIView):
+    permission_classes = [IsAuthenticated]
+    serializer_class = AssetsSerializer
+    queryset = AssetCryptoCoin.objects.all()

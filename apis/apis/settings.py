@@ -182,14 +182,74 @@ TEMPLATES = [
 WSGI_APPLICATION = "apis.wsgi.application"
 ASGI_APPLICATION = "apis.asgi.application"
 
+CSRF_COOKIE_SECURE = True
+SESSION_COOKIE_SECURE = True
+
+INTERVALS = ["1m", "5m", "15m", "30m", "1h", "1d"]
 REDIS_URL = "redis://redis:6379/1"
+KLINES_HASH = "prices:klines"
+LAST_HASH = "prices:last"
+TS_HASH = "prices:ts"
 
 CRYPHOS_LABEL = "Cryphos"
 CRYPHOS_URL = "https://cryphos.com"
 FUNDING_URL = "https://fapi.binance.com/fapi/v1/fundingRate"
 KLINES_URL = "https://api.binance.com/api/v3/klines"
-
+OKX_URL = "wss://ws.okx.com:8443/ws/v5/public"
+WS_BASE = "wss://stream.binance.com:9443/stream?streams="
 FNG_URL = "https://api.alternative.me/fng/"
+
+SYMBOLS = [
+    "btcusdt",
+    "usdcusdt",
+    "ethusdt",
+    "xrpusdt",
+    "solusdt",
+    "usd1usdt",
+    "sentusdt",
+    "bnbusdt",
+    "dogeusdt",
+    "adausdt",
+    "paxgusdt",
+    "zecusdt",
+    "fdusdusdt",
+    "suiusdt",
+    "trxusdt",
+    "linkusdt",
+    "pepeusdt",
+    "ltcusdt",
+    "asterusdt",
+    "avaxusdt",
+    "wlfiusdt",
+    "pumpusdt",
+    "taousdt",
+    "eurusdt",
+    "hbarusdt",
+    "bchusdt",
+    "nearusdt",
+    "enausdt",
+    "aaveusdt",
+    "usdeusdt",
+    "uniusdt",
+    "filusdt",
+    "xlmusdt",
+    "wldusdt",
+    "trumpusdt",
+    "wbtcusdt",
+    "arbusdt",
+    "zamausdt",
+    "xplusdt",
+    "wifusdt",
+    "bfusdusdt",
+    "dotusdt",
+    "polusdt",
+    "penguusdt",
+    "bonkusdt",
+    "virtualusdt",
+    "shibusdt",
+    "proveusdt",
+    "icpusdt",
+]
 
 CACHES = {
     "default": {

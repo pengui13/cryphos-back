@@ -4,16 +4,19 @@ from rest_framework import serializers
 from assets.models import AssetCryptoCoin, HistQuotes
 
 
+class RsiSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = RsiValue
+        fields = ["value"]
+
+
 class AssetsSerializer(serializers.ModelSerializer):
     class Meta:
         model = AssetCryptoCoin
         fields = ["symbol"]
 
-
-class RsiSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = RsiValue
-        fields = ["value"]
+    def to_representation(self, instance):
+        return instance.symbol
 
 
 class HistQuotesSerializer(serializers.ModelSerializer):

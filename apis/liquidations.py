@@ -6,23 +6,12 @@ import websockets
 from django.conf import settings
 from loguru import logger
 
-OKX_URL = "wss://ws.okx.com:8443/ws/v5/public"
-
-
-
-BUCKET_SIZES = {
-    "BTCUSDT": 100,
-    "ETHUSDT": 10,
-    "default": 0.01,
-}
-
-TTL_SECONDS = 86400
-
 
 class LiquidationFetcher:
+
     def __init__(self):
         self.running = False
-        self.redis: redis.Redis = None
+        self.redis = None
 
     async def start(self):
         self.running = True
@@ -39,46 +28,6 @@ class LiquidationFetcher:
         self.running = False
         if self.redis:
             await self.redis.close()
-
-    async def _connect_and_listen(self):
-        async with websockets.connect(OKX_URL) as ws:
-            subscribe_msg = {
-                "op": "subscribe",
-                "args": [{"channel": "liquidation-orders", "instType": "SWAP"}],
-            }
-            await ws.send(json.dumps(subscribe_msg))
-
-            asyncio.create_task(self._ping_loop(ws))
-
-            async for message in ws:
-                await self._handle_message(message)
-
-    async def _ping_loop(self, ws):
-        while self.running:
-            try:
-                await ws.send("ping")
-                await asyncio.sleep(20)
-            except Exception as e:
-                logger.error(e)
-                break
-
-    async def _handle_message(self, message: str | bytes):
-        if message == "pong":
-            return
-
-        try:
-            data = json.loads(message)
-        except Exception as e:
-            logger.error(e)
-            return
-
-        if "data" not in data:
-            return
-
-        for item in data.get("data", []):
-            inst_id = item.get("instId", "")
-            for detail in item.get("details", []):
-                await self._process_liquidation(inst_id, detail)
 
     async def _process_liquidation(self, inst_id: str, detail: dict):
         side = detail.get("side", "").lower()
@@ -100,40 +49,50 @@ class LiquidationFetcher:
             "exchange": "okx",
         }
 
-        # Publish to Redis pub/sub for WebSocket clients
         await self.redis.publish("liquidations", json.dumps(liquidation))
-
-        # Store in recent liquidations list (for initial load)
         await self.redis.lpush("recent_liquidations", json.dumps(liquidation))
-        await self.redis.ltrim("recent_liquidations", 0, 99)  # Keep last 100
+        await self.redis.ltrim("recent_liquidations", 0, 99)
 
-        # Heatmap data
-        bucket_size = BUCKET_SIZES.get(symbol, BUCKET_SIZES["default"])
-        bucket = int(price // bucket_size) * bucket_size
+    async def _connect_and_listen(self):
+        async with websockets.connect(settings.OKX_URL) as ws:
+            subscribe_msg = {
+                "op": "subscribe",
+                "args": [{"channel": "liquidation-orders",
+                          "instType": "SWAP"}],
+            }
+            await ws.send(json.dumps(subscribe_msg))
 
-        heatmap_key = f"heatmap:{symbol}"
-        stats_key = f"stats:{symbol}"
-        total_stats_key = "stats:total"
+            asyncio.create_task(self._ping_loop(ws))
 
-        pipe = self.redis.pipeline()
+            async for message in ws:
+                await self._handle_message(message)
 
-        pipe.hincrbyfloat(heatmap_key, f"{bucket}:{liq_type}", usd_value)
-        pipe.expire(heatmap_key, TTL_SECONDS)
+    async def _handle_message(self, message: str | bytes):
+        if message == "pong":
+            return
 
-        pipe.hincrbyfloat(stats_key, f"{liq_type}_usd", usd_value)
-        pipe.hincrby(stats_key, f"{liq_type}_count", 1)
-        pipe.expire(stats_key, TTL_SECONDS)
+        try:
+            data = json.loads(message)
+        except Exception as e:
+            logger.error(e)
+            return
 
-        pipe.hincrbyfloat(total_stats_key, f"{liq_type}_usd", usd_value)
-        pipe.hincrby(total_stats_key, "count", 1)
-        pipe.expire(total_stats_key, TTL_SECONDS)
+        if "data" not in data:
+            return
 
-        if usd_value > 50_000:
-            pipe.lpush("big_liquidations", json.dumps(liquidation))
-            pipe.ltrim("big_liquidations", 0, 99)
+        for item in data.get("data", []):
+            inst_id = item.get("instId", "")
+            for detail in item.get("details", []):
+                await self._process_liquidation(inst_id, detail)
 
-        await pipe.execute()
-
+    async def _ping_loop(self, ws):
+        while self.running:
+            try:
+                await ws.send("ping")
+                await asyncio.sleep(20)
+            except Exception as e:
+                logger.error(e)
+                break
 
 
 async def main():
