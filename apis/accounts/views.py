@@ -33,10 +33,7 @@ stripe.api_key = settings.STRIPE_SECRET_KEY
 @api_view(["POST"])
 @permission_classes([IsAuthenticated])
 def create_checkout_session(request):
-    """
-    Creates a Stripe Checkout Session for a subscription
-    tied to the logged-in user.
-    """
+
     user = request.user
 
     price_id = request.data.get("price_id") or settings.STRIPE_PRICE_ID

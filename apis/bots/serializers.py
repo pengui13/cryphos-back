@@ -104,12 +104,6 @@ class BotSerializer(serializers.ModelSerializer):
             "fib",
         ]
 
-    def create(self, validated_data):
-        assets = validated_data.pop("bot_assets", [])
-        validated_data["owner"] = self.context["request"].user
-        bot = Bot.objects.create(**validated_data)
-        bot.bot_assets.set(assets)
-        return bot
 
 
 class SignalSerializer(serializers.ModelSerializer):

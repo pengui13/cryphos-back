@@ -39,7 +39,7 @@ class DeleteMyBot(DestroyAPIView):
     permission_classes = [IsAuthenticated]
 
     def get_queryset(self):
-        return Bot.objects.filter(user=self.request.user)
+        return Bot.objects.filter(owner=self.request.user)
 
 
 # TODO rename to /me

@@ -978,7 +978,6 @@ def build_telegram_message(data: dict, bot=None) -> str:
     emoji = "🟢" if is_buy else "🔴"
     action = "LONG" if is_buy else "SHORT"
 
-    # Price formatting
     price = data["current_price"]
     if price >= 1000:
         price_str = f"${price:,.0f}"
@@ -987,11 +986,9 @@ def build_telegram_message(data: dict, bot=None) -> str:
     else:
         price_str = f"${price:.4f}"
 
-    # Footer bits
     bot_name = data.get("bot_name", "Trading Bot")
     cryphos_link = f'🔗 <a href="{CRYPHOS_URL}">{CRYPHOS_LABEL}</a>'
 
-    # Build message based on signal type
     if data.get("is_combined"):
         indicators_str = " + ".join(data["indicators"])
         reasons_str = "\n".join([f"• {r}" for r in data["reasons"]])
