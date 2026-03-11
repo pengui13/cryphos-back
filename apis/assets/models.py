@@ -3,7 +3,8 @@ from django.db import models
 
 class AssetCryptoCoin(models.Model):
     symbol = models.CharField(max_length=60)
-    sector = models.CharField(max_length=200, default="", blank=True, null=True)
+    sector = models.CharField(max_length=200, default="", blank=True,
+                              null=True)
     name = models.CharField(max_length=200)
     rank = models.IntegerField(default=0)
     icon_url = models.CharField(max_length=300, default="URL")
@@ -19,7 +20,6 @@ class AssetCryptoCoin(models.Model):
         return f"{self.symbol} {self.name}"
 
 
-
 class HistQuotes(models.Model):
     symbol = models.ForeignKey(
         AssetCryptoCoin, on_delete=models.CASCADE, related_name="hist_quotes"
@@ -31,7 +31,8 @@ class HistQuotes(models.Model):
     high_price = models.DecimalField(max_digits=20, decimal_places=10)
     low_price = models.DecimalField(max_digits=20, decimal_places=10)
     close_price = models.DecimalField(max_digits=20, decimal_places=10)
-    trade_count = models.DecimalField(max_digits=20, decimal_places=10, null=True, blank=True)
+    trade_count = models.DecimalField(max_digits=20, decimal_places=10,
+                                      null=True, blank=True)
 
     class Meta:
         constraints = [

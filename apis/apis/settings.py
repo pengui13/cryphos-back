@@ -47,7 +47,6 @@ INSTALLED_APPS = [
 ]
 
 
-
 SPECTACULAR_SETTINGS = {
     "TITLE": "Cryphos API",
     "VERSION": "1.0.0",
@@ -61,7 +60,7 @@ SPECTACULAR_SETTINGS = {
                 "bearerFormat": "JWT",
             }
         }
-    },
+    }
 }
 
 
@@ -88,11 +87,14 @@ STORAGES = {
 
 
 REST_FRAMEWORK = {
-    "DEFAULT_THROTTLE_RATES": {"anon": "300/day", "user": "5000/day", "auth": "10/minute"},
+    "DEFAULT_THROTTLE_RATES": {"anon": "300/day",
+                               "user": "5000/day", "auth": "10/minute"},
     "DEFAULT_AUTHENTICATION_CLASSES": (
         "rest_framework_simplejwt.authentication.JWTAuthentication",
     ),
-    "DEFAULT_PERMISSION_CLASSES": ("rest_framework.permissions.IsAuthenticated",),
+    "DEFAULT_PERMISSION_CLASSES": (
+        "rest_framework.permissions.IsAuthenticated",
+        ),
     "DEFAULT_SCHEMA_CLASS": "drf_spectacular.openapi.AutoSchema",
 }
 
@@ -275,16 +277,21 @@ DATABASES = {
 
 AUTH_PASSWORD_VALIDATORS = [
     {
-        "NAME": "django.contrib.auth.password_validation.UserAttributeSimilarityValidator",
+        "NAME":
+            "django.contrib.auth.password_validation.\
+                UserAttributeSimilarityValidator",
     },
     {
-        "NAME": "django.contrib.auth.password_validation.MinimumLengthValidator",
+        "NAME":
+            "django.contrib.auth.password_validation.MinimumLengthValidator",
     },
     {
-        "NAME": "django.contrib.auth.password_validation.CommonPasswordValidator",
+        "NAME":
+            "django.contrib.auth.password_validation.CommonPasswordValidator",
     },
     {
-        "NAME": "django.contrib.auth.password_validation.NumericPasswordValidator",
+        "NAME":
+            "django.contrib.auth.password_validation.NumericPasswordValidator",
     },
 ]
 

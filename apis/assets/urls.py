@@ -10,5 +10,8 @@ urlpatterns = [
     path("funding/",
          views.GetFundingRates.as_view(),
          name="funding"),
+    path("get_signals/<int:pk>/",
+         views.GetSignals.as_view(),
+         name="get_signals"),
     
 ]

@@ -1,6 +1,7 @@
 from django.contrib import admin
 
-from .models import BollingerBandsIndicator, Bot, RsiIndicator, Signal, SupportResistanceIndicator
+from .models import (BollingerBandsIndicator, Bot,
+                     RsiIndicator, Signal, SupportResistanceIndicator)
 
 
 @admin.register(Bot)

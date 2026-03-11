@@ -8,7 +8,8 @@ from django.contrib.auth import get_user_model
 from loguru import logger
 from django.utils import timezone
 from rest_framework import generics, status
-from rest_framework.decorators import api_view, authentication_classes, permission_classes
+from rest_framework.decorators import (api_view, authentication_classes,
+                                       permission_classes)
 from rest_framework.generics import RetrieveAPIView
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
@@ -79,7 +80,8 @@ def create_checkout_session(request):
                 }
             },
             client_reference_id=str(user.id),
-            success_url=f"{settings.FRONTEND_URL}/billing/success?session_id={{CHECKOUT_SESSION_ID}}",
+            success_url=f"{settings.FRONTEND_URL}/billing/\
+                        success?session_id={{CHECKOUT_SESSION_ID}}",
             cancel_url=f"{settings.FRONTEND_URL}/billing/cancel",
         )
     except Exception as e:
@@ -102,14 +104,16 @@ def create_billing_portal_session(request):
     try:
         bp = user.billing
         if not bp.stripe_customer_id:
-            return Response({"error": "No Stripe customer"}, status=status.HTTP_400_BAD_REQUEST)
+            return Response({"error": "No Stripe customer"},
+                            status=status.HTTP_400_BAD_REQUEST)
         portal = stripe.billing_portal.Session.create(
             customer=bp.stripe_customer_id,
             return_url=f"{settings.FRONTEND_URL}/account",
         )
         return Response({"url": portal.url})
     except BillingProfile.DoesNotExist:
-        return Response({"error": "No billing profile"}, status=status.HTTP_400_BAD_REQUEST)
+        return Response({"error": "No billing profile"},
+                        status=status.HTTP_400_BAD_REQUEST)
 
 
 @api_view(["GET"])
@@ -144,7 +148,8 @@ def stripe_webhook(request):
     sig = request.META.get("HTTP_STRIPE_SIGNATURE", "")
 
     try:
-        event = stripe.Webhook.construct_event(payload, sig, settings.STRIPE_WEBHOOK_SECRET)
+        event = stripe.Webhook.construct_event(payload, sig,
+                                               settings.STRIPE_WEBHOOK_SECRET)
     except Exception as e:
         logger.error("WEBHOOK ERROR (signature or payload):", e)
         return Response(status=status.HTTP_400_BAD_REQUEST)
@@ -160,7 +165,6 @@ def stripe_webhook(request):
             for k, v in session_meta.items():
                 meta.setdefault(k, v)
 
-
         bp = None
 
         bp_id = meta.get("billing_profile_id")
@@ -169,8 +173,11 @@ def stripe_webhook(request):
 
         if not bp:
             bp = (
-                BillingProfile.objects.filter(stripe_subscription_id=sub_id).first()
-                or BillingProfile.objects.filter(stripe_customer_id=customer_id).first()
+                BillingProfile.objects.
+                filter(stripe_subscription_id=sub_id).first()
+
+                or BillingProfile.objects.
+                filter(stripe_customer_id=customer_id).first()
             )
 
         user = None
@@ -198,7 +205,6 @@ def stripe_webhook(request):
                         bp.stripe_customer_id = customer_id
                         bp.save(update_fields=["stripe_customer_id"])
 
-
         items = sub.get("items", {}).get("data", [])
         price = items[0]["price"] if items else {}
 
@@ -209,7 +215,8 @@ def stripe_webhook(request):
         cpe = sub.get("current_period_end")
         te = sub.get("trial_end")
         if cpe:
-            bp.current_period_end = timezone.datetime.fromtimestamp(cpe, tz=timezone.utc)
+            bp.current_period_end = timezone.datetime.\
+                fromtimestamp(cpe, tz=timezone.utc)
         if te:
             bp.trial_end = timezone.datetime.fromtimestamp(te, tz=timezone.utc)
 
@@ -221,8 +228,6 @@ def stripe_webhook(request):
         if u.tg_approved != new_flag:
             u.tg_approved = new_flag
             u.save(update_fields=["tg_approved"])
-
-
 
     if etype == "checkout.session.completed":
         session_meta = data.get("metadata", {}) or {}
@@ -254,9 +259,9 @@ def stripe_webhook(request):
             except Exception as e:
                 logger.error("Error retrieving invoice/subscription:", e)
 
-
     elif etype == "invoice.payment_failed":
-        bp = BillingProfile.objects.filter(stripe_customer_id=data.get("customer")).first()
+        bp = BillingProfile.objects.\
+            filter(stripe_customer_id=data.get("customer")).first()
         if bp:
             bp.status = "past_due"
             bp.save(update_fields=["status"])
@@ -275,7 +280,8 @@ class RegisterStartView(generics.CreateAPIView):
         serializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         serializer.save()
-        return Response({"detail": "Verification code sent"}, status=status.HTTP_200_OK)
+        return Response({"detail": "Verification code sent"},
+                        status=status.HTTP_200_OK)
 
 
 class GetUserTelegram(RetrieveAPIView):
@@ -331,12 +337,14 @@ class RegisterView(generics.CreateAPIView):
 
         if not email or not password:
             return Response(
-                {"detail": "Email and password are required"}, status=status.HTTP_400_BAD_REQUEST
+                {"detail": "Email and password are required"},
+                status=status.HTTP_400_BAD_REQUEST
             )
 
         if password != password2:
             return Response(
-                {"detail": "Passwords do not match"}, status=status.HTTP_400_BAD_REQUEST
+                {"detail": "Passwords do not match"},
+                status=status.HTTP_400_BAD_REQUEST
             )
 
         if len(password) < 6:
@@ -353,7 +361,8 @@ class RegisterView(generics.CreateAPIView):
 
         if User.objects.filter(username=username).exists():
             return Response(
-                {"detail": "Username already taken"}, status=status.HTTP_400_BAD_REQUEST
+                {"detail": "Username already taken"},
+                status=status.HTTP_400_BAD_REQUEST
             )
 
         user = User.objects.create_user(
@@ -384,7 +393,8 @@ class RefreshTokenView(TokenRefreshView):
             serializer.is_valid(raise_exception=True)
         except Exception as e:
             logger.error(e)
-            return Response({"error": "Invalid refresh token"}, status=status.HTTP_401_UNAUTHORIZED)
+            return Response({"error": "Invalid refresh token"},
+                            status=status.HTTP_401_UNAUTHORIZED)
 
         return Response(serializer.validated_data, status=status.HTTP_200_OK)
 
@@ -422,31 +432,36 @@ class ResetStartView(APIView):
         email = request.data.get("email", "").strip()
 
         if not email:
-            return Response({"detail": "Email is required"}, status=status.HTTP_400_BAD_REQUEST)
+            return Response({"detail": "Email is required"},
+                            status=status.HTTP_400_BAD_REQUEST)
 
         try:
             user = User.objects.get(email=email)
         except User.DoesNotExist:
             return Response(
-                {"detail": "If this email exists, a reset code was sent to Telegram"},
+                {"detail":
+                    "If this email exists, a reset code was sent to Telegram"},
                 status=status.HTTP_200_OK,
             )
 
         if not user.chat_id:
             return Response(
-                {"detail": "No Telegram account linked. Please contact support."},
+                {"detail":
+                    "No Telegram account linked. Please contact support."},
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
         code = f"{random.randint(100000, 999999)}"
 
-        PasswordResetCode.objects.filter(user=user, is_used=False).update(is_used=True)
+        PasswordResetCode.objects.\
+            filter(user=user, is_used=False).update(is_used=True)
 
         PasswordResetCode.objects.create(user=user, code=code)
 
         send_telegram_reset_code(user.chat_id, code)
 
-        return Response({"detail": "Reset code sent to your Telegram"}, status=status.HTTP_200_OK)
+        return Response({"detail": "Reset code sent to your Telegram"},
+                        status=status.HTTP_200_OK)
 
 
 class AddTelegram(APIView):
@@ -487,12 +502,14 @@ class ResetVerifyView(APIView):
 
         if not all([email, code, password]):
             return Response(
-                {"detail": "All fields are required"}, status=status.HTTP_400_BAD_REQUEST
+                {"detail": "All fields are required"},
+                status=status.HTTP_400_BAD_REQUEST
             )
 
         if password != password2:
             return Response(
-                {"detail": "Passwords do not match"}, status=status.HTTP_400_BAD_REQUEST
+                {"detail": "Passwords do not match"},
+                status=status.HTTP_400_BAD_REQUEST
             )
 
         if len(password) < 6:
@@ -504,13 +521,17 @@ class ResetVerifyView(APIView):
         try:
             user = User.objects.get(email=email)
         except User.DoesNotExist:
-            return Response({"detail": "Invalid email"}, status=status.HTTP_400_BAD_REQUEST)
+            return Response({"detail": "Invalid email"},
+                            status=status.HTTP_400_BAD_REQUEST)
 
-        reset_code = PasswordResetCode.objects.filter(user=user, code=code, is_used=False).last()
+        reset_code = PasswordResetCode.objects.filter(user=user,
+                                                      code=code,
+                                                      is_used=False).last()
 
         if not reset_code or reset_code.is_expired():
             return Response(
-                {"detail": "Invalid or expired code"}, status=status.HTTP_400_BAD_REQUEST
+                {"detail": "Invalid or expired code"},
+                status=status.HTTP_400_BAD_REQUEST
             )
 
         reset_code.is_used = True
@@ -519,4 +540,5 @@ class ResetVerifyView(APIView):
         user.set_password(password)
         user.save()
 
-        return Response({"detail": "Password has been reset"}, status=status.HTTP_200_OK)
+        return Response({"detail": "Password has been reset"},
+                        status=status.HTTP_200_OK)

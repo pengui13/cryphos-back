@@ -2,7 +2,7 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.generics import ListAPIView
 from .models import AssetCryptoCoin
 from .serializers import AssetsSerializer
-from bots.utils import RedisService
+from bots.services import RedisService
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from assets.serializers import FundingRateSerializer

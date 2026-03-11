@@ -226,7 +226,8 @@ class SupportResistanceIndicator(BaseIndicator):
         verbose_name_plural = "Support/Resistance Indicators"
 
     def __str__(self):
-        return f"S/R for bot #{self.bot.owner.email}|{self.mode} | n={self.lookback})"
+        return f"S/R for bot #{self.bot.owner.email}|{self.mode} | \
+                n={self.lookback})"
 
     def uses_rolling(self) -> bool:
         return self.mode in ("rolling", "both")
@@ -246,7 +247,8 @@ class SupportResistanceIndicator(BaseIndicator):
 
 
 class MaIndicator(BaseIndicator):
-    bot = models.ForeignKey(Bot, related_name="ma_indicators", on_delete=models.CASCADE)
+    bot = models.ForeignKey(Bot, related_name="ma_indicators", 
+                            on_delete=models.CASCADE)
     period = models.IntegerField(default=20)
 
     class Meta:
@@ -254,7 +256,8 @@ class MaIndicator(BaseIndicator):
         verbose_name_plural = "Moving Average Indicators"
 
     def __str__(self):
-        return f"{self.bot.owner.email}|period={self.period}|intervals={[f'{interval}|' for interval in self.intervals]}"
+        return f"{self.bot.owner.email}|period={self.period}| \
+                 intervals={[f'{interval}|' for interval in self.intervals]}"
 
     def clean(self):
         if not (0 <= self.lower <= 100 and 0 <= self.upper <= 100):
@@ -264,7 +267,8 @@ class MaIndicator(BaseIndicator):
 
 
 class MacdIndicator(BaseIndicator):
-    bot = models.ForeignKey(Bot, related_name="macd_indicators", on_delete=models.CASCADE)
+    bot = models.ForeignKey(Bot, related_name="macd_indicators", 
+                            on_delete=models.CASCADE)
     fast_period = models.IntegerField(default=12)
     slow_period = models.IntegerField(default=26)
     signal_period = models.IntegerField(default=9)
@@ -272,21 +276,6 @@ class MacdIndicator(BaseIndicator):
     class Meta:
         verbose_name = "MACD Indicator"
         verbose_name_plural = "MACD Indicators"
-
-
-class FnGValue(models.Model):
-    value = models.PositiveSmallIntegerField(default=0)
-    classification = models.CharField(max_length=100)
-    timestamp = models.PositiveBigIntegerField(default=0)
-    time_until_update = models.PositiveBigIntegerField(default=0)
-
-    def __str__(self):
-        return f"{self.classification} - {self.value} - {self.timestamp}"
-
-    class Meta:
-        verbose_name = "Fear and Greed Value"
-        verbose_name_plural = "Fear and Greed Values"
-        ordering = ["-timestamp"]
 
 
 class FiboIndicator(BaseIndicator):
@@ -299,7 +288,8 @@ class FiboIndicator(BaseIndicator):
         ("78.6", "78.6%"),
         ("100", "100%"),
     ]
-    bot = models.ForeignKey(Bot, related_name="fibo_indicators", on_delete=models.CASCADE)
+    bot = models.ForeignKey(Bot, related_name="fibo_indicators",
+                            on_delete=models.CASCADE)
     period = models.IntegerField(default=50)
     levels = ArrayField(
         models.DecimalField(max_digits=5, decimal_places=1),
@@ -342,7 +332,8 @@ class Signal(models.Model):
     def __str__(self):
         direction = "LONG" if self.is_long else "SHORT"
         status = "OPEN" if self.is_open else "CLOSED"
-        return f"{self.bot.owner.email}|{self.asset.symbol}|{direction}|{status}"
+        return f"{self.bot.owner.email}|\
+                {self.asset.symbol}|{direction}|{status}"
 
 
 class BollingerBandsIndicator(BaseIndicator):
@@ -359,7 +350,9 @@ class BollingerBandsIndicator(BaseIndicator):
         verbose_name_plural = "Bollinger Bands Indicators"
 
     def __str__(self):
-        return f"{self.bot.owner.email}|period={self.period}|std_dev={self.std_dev}|intervals={[f'{interval}|' for interval in self.intervals]}"
+        return f"{self.bot.owner.email}|period={self.period}|\
+                std_dev={self.std_dev}|\
+                intervals={[f'{interval}|' for interval in self.intervals]}"
 
 
 class FundingRate(models.Model):
@@ -393,7 +386,8 @@ class ObvIndicator(BaseIndicator):
 
 
 class EmaIndicator(BaseIndicator):
-    bot = models.ForeignKey(Bot, related_name="ema_indicators", on_delete=models.CASCADE)
+    bot = models.ForeignKey(Bot, related_name="ema_indicators",
+                            on_delete=models.CASCADE)
     period = models.IntegerField(default=14)
 
     class Meta:
@@ -406,45 +400,3 @@ class BaseIndicatorValue(models.Model):
 
     class Meta:
         abstract = True
-
-
-class RsiValue(BaseIndicatorValue):
-    value = models.DecimalField(max_digits=20, decimal_places=10)
-    indicator = models.ForeignKey(
-        RsiIndicator,
-        on_delete=models.SET_NULL,
-        null=True,
-        blank=True,
-        related_name="rsi_values",
-    )
-
-    class Meta:
-        verbose_name = "RSI Value"
-        verbose_name_plural = "RSI Values"
-
-
-class MaValue(BaseIndicatorValue):
-    value = models.DecimalField(max_digits=20, decimal_places=10)
-    indicator = models.ForeignKey(
-        MaIndicator,
-        on_delete=models.SET_NULL,
-        related_name="ma_values",
-        null=True,
-        blank=True,
-    )
-
-    class Meta:
-        verbose_name = "MA Value"
-        verbose_name_plural = "MA Values"
-        ordering = ["quote__time"]
-
-
-class BotStat(models.Model):
-    bot = models.ForeignKey(Bot, on_delete=models.CASCADE, related_name="stats")
-    pnl = models.DecimalField(max_digits=20, decimal_places=2, default=0)
-    roi = models.DecimalField(max_digits=10, decimal_places=2, default=0)
-    timestamp = models.DateTimeField(auto_now_add=True)
-
-    class Meta:
-        db_table = "bot_stats"
-

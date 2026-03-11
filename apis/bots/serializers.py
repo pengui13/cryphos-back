@@ -3,8 +3,7 @@ from decimal import Decimal
 from . import models
 from assets.models import AssetCryptoCoin
 from rest_framework import serializers
-
-ALLOWED_TFS = {"1MIN", "5MIN", "15MIN", "30MIN", "1HRS", "1DAY"}
+from django.conf import settings
 
 
 class BotSerializer(serializers.ModelSerializer):
@@ -89,9 +88,10 @@ class SignalSerializer(serializers.ModelSerializer):
 
 class SupportResistanceIndicatorSerializer(serializers.ModelSerializer):
     intervals = serializers.ListField(
-        child=serializers.ChoiceField(choices=sorted(ALLOWED_TFS)),
-        allow_empty=False
-    )
+                child=serializers.ChoiceField(
+                      choices=sorted(settings.SUPPORTED_TIMEFRAMES.values())),
+                allow_empty=False
+                    )
 
     class Meta:
         model = models.SupportResistanceIndicator
@@ -116,14 +116,9 @@ class SupportResistanceIndicatorSerializer(serializers.ModelSerializer):
         bot = self.context.get("bot")
         if bot is None:
             raise serializers.ValidationError("Bot context is required.")
-        return models.SupportResistanceIndicator.objects.create(bot=bot,
-                                                                **validated_data)
-
-
-class BotStatsSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = models.BotStat
-        fields = ["pnl", "roi", "timestamp"]
+        return models.SupportResistanceIndicator.objects \
+                                                .create(bot=bot,
+                                                        **validated_data)
 
 
 class BaseIndicatorSerializer(serializers.ModelSerializer):
