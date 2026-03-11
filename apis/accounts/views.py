@@ -17,7 +17,6 @@ from rest_framework.views import APIView
 from rest_framework_simplejwt.serializers import TokenRefreshSerializer
 from rest_framework_simplejwt.tokens import RefreshToken
 from rest_framework_simplejwt.views import TokenRefreshView
-
 from .models import BillingProfile, PasswordResetCode
 from .serializers import (
     LoginSerializer,
