@@ -3,8 +3,8 @@ from loguru import logger
 import redis
 import requests
 from assets.models import AssetCryptoCoin, HistQuotes
-from bots.models import Bot, FundingRate, RiskSettings, Signal, FiboIndicator
-from bots.utils import IndicatorsCalc
+from bots.models import RiskSettings, Signal, FiboIndicator
+from bots.services import RedisService, IndicatorService
 from celery import shared_task
 from django.conf import settings
 from django.contrib.auth import get_user_model
@@ -13,15 +13,9 @@ from django.core.management import call_command
 from django.utils import timezone
 from core.fetching_service import FetchingService
 from .task_utils import TaskUtilsService
-from bots.utils import RedisService
-from itertools import chain
 User = get_user_model()
 
-
-INTERVAL_SEC = {"1MIN": 60, "5MIN": 300, "15MIN": 900, "30MIN": 1800, "1HRS": 3600}
-
 r = redis.from_url("redis://redis:6379/1", decode_responses=True)
-
 
 @shared_task
 def calculate_swing():
@@ -44,7 +38,8 @@ def calculate_swing():
                 if not last_price:
                     continue
                 closes = list(
-                    HistQuotes.objects.filter(symbol=asset.id, interval=interval)
+                    HistQuotes.objects
+                    .filter(symbol=asset.id, interval=interval)
                     .order_by("-time")
                     .values_list("close_price", flat=True)[:indicator.period]
                 )
@@ -165,13 +160,8 @@ def check_roi():
 
 @shared_task
 def calculate_signals():
-    """
-    Calculate signals with CONFLUENCE logic:
-    - If bot has 1 indicator: send signal when that indicator triggers
-    - If bot has 2+ indicators: ONLY send signal when ALL indicators agree on same direction
-    """
 
-    calc = IndicatorsCalc()
+    calc = IndicatorService()
     assets = AssetCryptoCoin.objects.prefetch_related("bots")
 
     logger.info("=" * 60)
@@ -198,7 +188,8 @@ def calculate_signals():
             has_ma = bot.ma_indicators.exists()
             has_fibo = bot.fibo_indicators.exists()
 
-            enabled_count = sum([has_rsi, has_bb, has_sr, has_ema, has_ma, has_fibo])
+            enabled_count = sum([has_rsi, has_bb,
+                                 has_sr, has_ema, has_ma, has_fibo])
 
             signals = []
 
@@ -206,7 +197,6 @@ def calculate_signals():
                 rsi_signal = calculate_rsi_signal(asset, bot, calc)
                 if rsi_signal:
                     signals.append(rsi_signal)
-                    logger.info(f"RSI: {rsi_signal['direction']} (value={rsi_signal['value']:.2f})")
                 else:
                     continue
 
@@ -252,7 +242,6 @@ def calculate_signals():
                     continue
 
             if len(signals) != enabled_count:
-                logger.info(f"    ⏭️  Only {len(signals)}/{enabled_count} indicators triggered")
                 continue
 
             directions = [s["direction"] for s in signals]
@@ -272,15 +261,12 @@ def calculate_signals():
 
             total_signals_sent += 1
 
-    logger.info("=" * 60)
-    logger.info(f"   Bots checked: {total_bots_checked}")
-    logger.info(f"   Signals sent: {total_signals_sent}")
-    logger.info("=" * 60)
 
-
-def send_close_signal_telegram(user, signal, roi: float, close_reason: str | None) -> bool:
+def send_close_signal_telegram(user, signal, roi: float,
+                               close_reason: str | None) -> bool:
     """Send signal close notification via Telegram."""
-    if not getattr(user, "chat_id", None) or not getattr(user, "tg_approved", False):
+    if not getattr(user, "chat_id", None) or not getattr(user,
+                                                         "tg_approved", False):
         return False
 
     text = build_close_signal_message(signal, roi, close_reason)
@@ -711,7 +697,9 @@ def calculate_fibo_signal(asset, bot):
 
     for interval in fibo_indicator.intervals:
         last_quote = (
-            HistQuotes.objects.filter(symbol=asset, interval=interval).order_by("-time").first()
+            HistQuotes.objects.filter(symbol=asset,
+                                      interval=interval)
+            .order_by("-time").first()
         )
         if not last_quote:
             continue
@@ -743,12 +731,14 @@ def calculate_fibo_signal(asset, bot):
             p = level_price(is_up_trend, high, low, diff, level_pct)
 
             if is_up_trend:
-                crossed_up = (prev_close <= (p - tolerance)) and (curr_close > (p + tolerance))
+                crossed_up = (prev_close <= (p - tolerance))\
+                    and (curr_close > (p + tolerance))
                 if crossed_up:
                     signal = "BUY"
                     break
             else:
-                crossed_down = (prev_close >= (p + tolerance)) and (curr_close < (p - tolerance))
+                crossed_down = (prev_close >= (p + tolerance))\
+                    and (curr_close < (p - tolerance))
                 if crossed_down:
                     signal = "SELL"
                     break
@@ -785,14 +775,13 @@ def calculate_sr_signal(asset, bot, calc) -> dict | None:
     signals_found = []
 
     for interval in sr_indicator.intervals:
-        quotes = HistQuotes.objects.filter(symbol=asset, interval=interval).order_by("-time")[
+        quotes = HistQuotes.objects.filter(symbol=asset,
+                                           interval=interval).\
+                                               order_by("-time")[
             : sr_indicator.lookback
         ]
 
         if len(quotes) < 20:
-            logger.info(
-                f"      [{asset.symbol}] Not enough quotes for S/R on {interval} (need 20, got {len(quotes)})"
-            )
             continue
 
         levels = calc.calculate_support_resistance(
@@ -817,15 +806,9 @@ def calculate_sr_signal(asset, bot, calc) -> dict | None:
         closest_support = max(supports)
         closest_resistance = min(resistances)
 
-        # Calculate distance to levels (as percentage)
         support_distance = abs((current_price - closest_support) / current_price) * 100
         resistance_distance = abs((closest_resistance - current_price) / current_price) * 100
 
-        logger.info(
-            f"      [{asset.symbol}] {interval} S/R: price={current_price:.2f}, support={closest_support:.2f} ({support_distance:.2f}%), resistance={closest_resistance:.2f} ({resistance_distance:.2f}%)"
-        )
-
-        # Signal if within 1% of a level
         if support_distance < 1.0:
             signals_found.append(
                 ("BUY", f"Price near support ${closest_support:.2f} · Bounce expected")

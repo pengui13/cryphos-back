@@ -4,10 +4,12 @@ from .models import BillingProfile, User
 
 @admin.register(User)
 class UserAdmin(admin.ModelAdmin):
-    list_display = ('username', 'email', 'tg_nickname', 'tg_approved', 'chat_id')
+    list_display = ('username', 'email', 'tg_nickname',
+                    'tg_approved', 'chat_id')
     list_filter = ("tg_approved",)
     search_fields = ("username", "email", "tg_nickname")
     readonly_fields = ('email', 'chat_id')
+
 
 @admin.register(BillingProfile)
 class BillingProfileAdmin(admin.ModelAdmin):

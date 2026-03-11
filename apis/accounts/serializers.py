@@ -93,9 +93,11 @@ class RegisterVerifySerializer(serializers.Serializer):
         except PendingRegistration.DoesNotExist as err:
             raise serializers.ValidationError("Invalid code or email") from err
         if pending.is_expired():
-            raise serializers.ValidationError("Code has expired. Please restart registration.")
+            raise serializers.ValidationError("Code has expired.\
+                Please restart registration.")
         if pending.tries >= 5:
-            raise serializers.ValidationError("Too many attempts. Please restart registration.")
+            raise serializers.ValidationError("Too many attempts.\
+                Please restart registration.")
         if code != pending.code:
             pending.tries += 1
             pending.save(update_fields=["tries"])
@@ -129,7 +131,8 @@ class LoginSerializer(serializers.Serializer):
         password = attrs.get("password")
 
         if not email or not password:
-            raise serializers.ValidationError("Email and password are required.")
+            raise serializers.\
+                ValidationError("Email and password are required.")
 
         try:
             user = User.objects.get(email=email)
@@ -175,5 +178,6 @@ class ResetVerifySerializer(serializers.Serializer):
 
     def validate(self, attrs):
         if attrs["password"] != attrs["password2"]:
-            raise serializers.ValidationError({"password": "Passwords do not match"})
+            raise serializers.\
+                ValidationError({"password": "Passwords do not match"})
         return attrs

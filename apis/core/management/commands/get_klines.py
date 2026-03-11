@@ -51,13 +51,15 @@ class Command(BaseCommand):
             "--symbol",
             type=str,
             default=None,
-            help="Specific asset symbol. If not set, fetches all assets in DB.",
+            help="Specific asset symbol.\
+                If not set, fetches all assets in DB.",
         )
         parser.add_argument(
             "--interval",
             type=str,
             default=None,
-            help="Specific interval to fetch (e.g., 1d). If not set, fetches all.",
+            help="Specific interval to fetch (e.g., 1d).\
+                If not set, fetches all.",
         )
         parser.add_argument(
             "--limit",
@@ -101,10 +103,12 @@ class Command(BaseCommand):
 
             for binance_interval, db_interval in intervals_to_fetch.items():
                 try:
-                    candles = fetch_klines(binance_symbol, binance_interval, limit)
+                    candles = fetch_klines(binance_symbol,
+                                           binance_interval, limit)
 
                     if not candles:
-                        self.stderr.write(f"  {db_interval}: No candles returned")
+                        self.stderr.write(f"{db_interval}:\
+                            No candles returned")
                         continue
 
                     HistQuotes.objects.filter(
@@ -126,24 +130,33 @@ class Command(BaseCommand):
                         for c in candles
                     ]
 
-                    HistQuotes.objects.bulk_create(quotes_to_create, ignore_conflicts=True)
+                    HistQuotes.objects.bulk_create(quotes_to_create,
+                                                   ignore_conflicts=True)
                     total_saved += len(quotes_to_create)
-                    self.stdout.write(f"  {db_interval}: {len(quotes_to_create)} candles")
+                    self.stdout.write(f"{db_interval}:\
+                        {len(quotes_to_create)} candles")
 
                 except requests.exceptions.HTTPError as e:
-                    self.stderr.write(self.style.ERROR(f"  {db_interval}: HTTP error - {e}"))
+                    self.stderr.\
+                        write(self.style.ERROR(f"{db_interval}:\
+                            HTTP error - {e}"))
                     if asset.symbol not in failed_assets:
                         failed_assets.append(asset.symbol)
                 except Exception as e:
-                    self.stderr.write(self.style.ERROR(f"  {db_interval}: Error - {e}"))
+                    self.stderr.\
+                        write(self.style.ERROR(f"{db_interval}:\
+                            Error - {e}"))
                     if asset.symbol not in failed_assets:
                         failed_assets.append(asset.symbol)
 
                 time.sleep(0.1)
 
-        # Summary
         self.stdout.write("\n" + "=" * 40)
-        self.stdout.write(self.style.SUCCESS(f"Done! Saved {total_saved} total candles"))
+        self.stdout.\
+            write(self.style.SUCCESS(f"Done! Saved {total_saved}\
+                total candles"))
 
         if failed_assets:
-            self.stdout.write(self.style.WARNING(f"Failed assets: {', '.join(failed_assets)}"))
+            self.stdout.\
+                write(self.style.WARNING(f"Failed assets:\
+                    {', '.join(failed_assets)}"))
