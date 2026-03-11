@@ -1,13 +1,7 @@
-from bots.models import RsiValue
+from bots.models import FundingRate
 from rest_framework import serializers
 
 from assets.models import AssetCryptoCoin, HistQuotes
-
-
-class RsiSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = RsiValue
-        fields = ["value"]
 
 
 class AssetsSerializer(serializers.ModelSerializer):
@@ -33,3 +27,14 @@ class HistQuotesSerializer(serializers.ModelSerializer):
             "close_price",
             "volume",
         ]
+
+
+class FundingRateSerializer(serializers.ModelSerializer):
+    asset = serializers.SerializerMethodField()
+
+    def get_asset(self, obj):
+        return obj.asset.symbol
+
+    class Meta:
+        model = FundingRate
+        fields = ["id", "asset", "rate", "funding_time", "exchange"]

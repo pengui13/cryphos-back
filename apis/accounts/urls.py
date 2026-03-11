@@ -48,4 +48,17 @@ urlpatterns = [
     path("billing/me/",
          views.billing_me,
          name="billing_me"),
+    path(
+        "add_telegram/",
+        views.AddTelegram.as_view(),
+        name="add_telegram",
+    ),
+    path("me/",
+         views.me,
+         name="me"),
+    path(
+        "get_tg_info/",
+        views.GetTelegramInfo.as_view(),
+        name="add_telegram",
+    ),
 ]

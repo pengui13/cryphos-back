@@ -1,41 +1,13 @@
 from decimal import Decimal
 
+from . import models
 from assets.models import AssetCryptoCoin
 from rest_framework import serializers
-
-from .models import (
-    AtrIndicator,
-    BollingerBandsIndicator,
-    Bot,
-    BotStat,
-    EmaIndicator,
-    FiboIndicator,
-    FundingRate,
-    MacdIndicator,
-    MaIndicator,
-    ObvIndicator,
-    RiskSettings,
-    RsiIndicator,
-    Signal,
-    SupportResistanceIndicator,
-)
 
 ALLOWED_TFS = {"1MIN", "5MIN", "15MIN", "30MIN", "1HRS", "1DAY"}
 
 
-class FundingRateSerializer(serializers.ModelSerializer):
-    asset = serializers.SerializerMethodField()
-
-    def get_asset(self, obj):
-        return obj.asset.symbol
-
-    class Meta:
-        model = FundingRate
-        fields = ["id", "asset", "rate", "funding_time", "exchange"]
-
-
 class BotSerializer(serializers.ModelSerializer):
-    MAX_ASSETS = 15
 
     bot_assets = serializers.SlugRelatedField(
         many=True,
@@ -75,7 +47,7 @@ class BotSerializer(serializers.ModelSerializer):
         return SupportResistanceIndicatorSerializer(ind).data if ind else None
 
     class Meta:
-        model = Bot
+        model = models.Bot
         fields = [
             "id",
             "created_at",
@@ -105,12 +77,11 @@ class BotSerializer(serializers.ModelSerializer):
         ]
 
 
-
 class SignalSerializer(serializers.ModelSerializer):
     asset = serializers.CharField(source="asset.symbol", read_only=True)
 
     class Meta:
-        model = Signal
+        model = models.Signal
         fields = ["asset", "bot", "close_price", "closed_at",
                   "created_at", "is_long", "is_open", "open_price"]
         read_only_fields = fields
@@ -118,11 +89,12 @@ class SignalSerializer(serializers.ModelSerializer):
 
 class SupportResistanceIndicatorSerializer(serializers.ModelSerializer):
     intervals = serializers.ListField(
-        child=serializers.ChoiceField(choices=sorted(ALLOWED_TFS)), allow_empty=False
+        child=serializers.ChoiceField(choices=sorted(ALLOWED_TFS)),
+        allow_empty=False
     )
 
     class Meta:
-        model = SupportResistanceIndicator
+        model = models.SupportResistanceIndicator
         fields = [
             "id",
             "mode",
@@ -144,19 +116,17 @@ class SupportResistanceIndicatorSerializer(serializers.ModelSerializer):
         bot = self.context.get("bot")
         if bot is None:
             raise serializers.ValidationError("Bot context is required.")
-        return SupportResistanceIndicator.objects.create(bot=bot, **validated_data)
+        return models.SupportResistanceIndicator.objects.create(bot=bot,
+                                                                **validated_data)
 
 
 class BotStatsSerializer(serializers.ModelSerializer):
     class Meta:
-        model = BotStat
+        model = models.BotStat
         fields = ["pnl", "roi", "timestamp"]
 
 
-class ObvIndicatorSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = ObvIndicator
-        fields = ["intervals"]
+class BaseIndicatorSerializer(serializers.ModelSerializer):
 
     def create(self, validated_data):
         bot = self.context["bot"]
@@ -164,7 +134,18 @@ class ObvIndicatorSerializer(serializers.ModelSerializer):
         return super().create(validated_data)
 
 
-class FiboSerializer(serializers.ModelSerializer):
+class RsiIndicatorSerializer(BaseIndicatorSerializer):
+    class Meta:
+        model = models.RsiIndicator
+        fields = ["intervals", "min", "max", "period"]
+
+    def create(self, validated_data):
+        bot = self.context["bot"]
+        validated_data["bot"] = bot
+        return super().create(validated_data)
+
+
+class FiboSerializer(BaseIndicatorSerializer):
     VALID_LEVELS = [
         Decimal("0"),
         Decimal("23.6"),
@@ -176,89 +157,54 @@ class FiboSerializer(serializers.ModelSerializer):
     ]
 
     class Meta:
-        model = FiboIndicator
+        model = models.FiboIndicator
         fields = ["intervals", "period", "levels"]
 
     def validate_levels(self, values):
         for value in values:
             if value not in self.VALID_LEVELS:
-                raise serializers.ValidationError(f"{value} is not a valid Fibonacci level")
+                raise serializers.ValidationError(f"{value} not a valid level")
         return values
 
-    def create(self, validated_data):
-        bot = self.context["bot"]
-        validated_data["bot"] = bot
-        return super().create(validated_data)
 
-
-class RsiIndicatorSerializer(serializers.ModelSerializer):
+class ObvIndicatorSerializer(BaseIndicatorSerializer):
     class Meta:
-        model = RsiIndicator
-        fields = ["intervals", "min", "max", "period"]
-
-    def create(self, validated_data):
-        bot = self.context["bot"]
-        validated_data["bot"] = bot
-        return super().create(validated_data)
+        model = models.ObvIndicator
+        fields = ["intervals"]
 
 
-class EmaIndicatorSerializer(serializers.ModelSerializer):
+class MacdIndicatorSerializer(BaseIndicatorSerializer):
     class Meta:
-        model = EmaIndicator
-        fields = ["intervals", "period"]
-
-    def create(self, validated_data):
-        bot = self.context["bot"]
-        validated_data["bot"] = bot
-        return super().create(validated_data)
-
-
-class MaIndicatorSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = MaIndicator
-        fields = ["intervals", "period"]
-
-    def create(self, validated_data):
-        bot = self.context["bot"]
-        validated_data["bot"] = bot
-        return super().create(validated_data)
-
-
-class MacdIndicatorSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = MacdIndicator
+        model = models.MacdIndicator
         fields = ["intervals", "fast_period", "slow_period", "signal_period"]
 
-    def create(self, validated_data):
-        bot = self.context["bot"]
-        validated_data["bot"] = bot
-        return super().create(validated_data)
 
-
-class BollingerBandsIndicatorSerializer(serializers.ModelSerializer):
+class EmaIndicatorSerializer(BaseIndicatorSerializer):
     class Meta:
-        model = BollingerBandsIndicator
-        fields = ["intervals", "period", "std_dev"]
+        model = models.EmaIndicator
+        fields = ["intervals", "period"]
+        
 
-    def create(self, validated_data):
-        bot = self.context["bot"]
-        validated_data["bot"] = bot
-        return super().create(validated_data)
-
-
-class AtrIndicatorSerializer(serializers.ModelSerializer):
+class MaIndicatorSerializer(BaseIndicatorSerializer):
     class Meta:
-        model = AtrIndicator
+        model = models.MaIndicator
         fields = ["intervals", "period"]
 
-    def create(self, validated_data):
-        bot = self.context["bot"]
-        validated_data["bot"] = bot
-        return super().create(validated_data)
+
+class BollingerBandsIndicatorSerializer(BaseIndicatorSerializer):
+    class Meta:
+        model = models.BollingerBandsIndicator
+        fields = ["intervals", "period", "std_dev"]
+
+
+class AtrIndicatorSerializer(BaseIndicatorSerializer):
+    class Meta:
+        model = models.AtrIndicator
+        fields = ["intervals", "period"]
 
 
 class RiskSerializer(serializers.ModelSerializer):
     class Meta:
-        model = RiskSettings
+        model = models.RiskSettings
         fields = ["take_profit", "stop_loss"]
 

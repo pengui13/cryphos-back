@@ -448,5 +448,3 @@ class BotStat(models.Model):
     class Meta:
         db_table = "bot_stats"
 
-
-

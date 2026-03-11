@@ -26,6 +26,7 @@ from .serializers import (
     UserSerializer,
 )
 
+
 User = get_user_model()
 stripe.api_key = settings.STRIPE_SECRET_KEY
 
@@ -446,6 +447,31 @@ class ResetStartView(APIView):
         send_telegram_reset_code(user.chat_id, code)
 
         return Response({"detail": "Reset code sent to your Telegram"}, status=status.HTTP_200_OK)
+
+
+class AddTelegram(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request):
+        user = request.user
+        telegram_nickname = request.data.get("nickname", "")
+        user.tg_nickname = telegram_nickname
+        user.save()
+        return Response({"resp": "all good"})
+
+
+class GetTelegramInfo(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        user = request.user
+        return Response({"tg": user.tg_nickname, "chat_id": user.chat_id})
+
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def me(request):
+    return Response({"ping": True})
 
 
 class ResetVerifyView(APIView):
