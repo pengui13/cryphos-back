@@ -3,7 +3,6 @@ import json
 from datetime import UTC, datetime
 import redis.asyncio as redis
 import websockets
-from django.conf import settings
 from loguru import logger
 
 
@@ -54,7 +53,7 @@ class LiquidationFetcher:
         await self.redis.ltrim("recent_liquidations", 0, 99)
 
     async def _connect_and_listen(self):
-        async with websockets.connect(settings.OKX_URL) as ws:
+        async with websockets.connect("wss://ws.okx.com:8443/ws/v5/public") as ws:
             subscribe_msg = {
                 "op": "subscribe",
                 "args": [{"channel": "liquidation-orders",
