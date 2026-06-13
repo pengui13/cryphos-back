@@ -12,7 +12,7 @@ environ.Env.read_env(os.path.join(BASE_DIR, ".env"))
 ENV = environ.Env()
 DEBUG = ENV("DEBUG")
 
-ALLOWED_HOSTS = ["cryphos.com"]
+ALLOWED_HOSTS = ["api.cryphos.com", "localhost", "127.0.0.1"]
 
 
 SUPPORTED_TIMEFRAMES = {
