@@ -10,6 +10,7 @@ class User(AbstractUser):
     tg_approved = models.BooleanField(default=False)
     chat_id = models.CharField(default="", null=True, blank=True)
     avatar = models.ImageField(upload_to="avatars/", null=True, blank=True)
+    usdt_trc20_wallet = models.CharField(max_length=64, blank=True, default="")
 
     def __str__(self):
         return self.username

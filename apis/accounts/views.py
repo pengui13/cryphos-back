@@ -18,6 +18,7 @@ from rest_framework_simplejwt.serializers import TokenRefreshSerializer
 from rest_framework_simplejwt.tokens import RefreshToken
 from rest_framework_simplejwt.views import TokenRefreshView
 from .models import BillingProfile, PasswordResetCode
+from .validators import is_valid_tron_address
 from .serializers import (
     LoginSerializer,
     RegisterResendSerializer,
@@ -504,11 +505,12 @@ def profile_data(user, request):
         "username": user.username,
         "email": user.email,
         "avatar": avatar_url,
+        "usdt_trc20_wallet": user.usdt_trc20_wallet or "",
     }
 
 
 class ProfileView(APIView):
-    """GET current profile, PATCH to update username."""
+    """GET current profile, PATCH to update username and/or wallet."""
 
     permission_classes = [IsAuthenticated]
 
@@ -517,30 +519,50 @@ class ProfileView(APIView):
 
     def patch(self, request):
         user = request.user
-        username = (request.data.get("username") or "").strip()
+        updated_fields = []
 
-        if not username:
+        if "username" in request.data:
+            username = (request.data.get("username") or "").strip()
+            if not username:
+                return Response(
+                    {"detail": "Username is required"},
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
+            if len(username) < 3:
+                return Response(
+                    {"detail": "Username must be at least 3 characters"},
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
+            if (
+                User.objects.filter(username__iexact=username)
+                .exclude(pk=user.pk)
+                .exists()
+            ):
+                return Response(
+                    {"detail": "Username is already taken"},
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
+            user.username = username
+            updated_fields.append("username")
+
+        if "usdt_trc20_wallet" in request.data:
+            wallet = (request.data.get("usdt_trc20_wallet") or "").strip()
+            # Empty value clears the saved wallet.
+            if wallet and not is_valid_tron_address(wallet):
+                return Response(
+                    {"detail": "Invalid TRC20 USDT wallet address"},
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
+            user.usdt_trc20_wallet = wallet
+            updated_fields.append("usdt_trc20_wallet")
+
+        if not updated_fields:
             return Response(
-                {"detail": "Username is required"},
-                status=status.HTTP_400_BAD_REQUEST,
-            )
-        if len(username) < 3:
-            return Response(
-                {"detail": "Username must be at least 3 characters"},
-                status=status.HTTP_400_BAD_REQUEST,
-            )
-        if (
-            User.objects.filter(username__iexact=username)
-            .exclude(pk=user.pk)
-            .exists()
-        ):
-            return Response(
-                {"detail": "Username is already taken"},
+                {"detail": "Nothing to update"},
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
-        user.username = username
-        user.save(update_fields=["username"])
+        user.save(update_fields=updated_fields)
         return Response(profile_data(user, request))
 
 
