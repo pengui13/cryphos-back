@@ -189,15 +189,14 @@ class BotService:
         with transaction.atomic():
             assets = validated_data.pop("bot_assets", [])
             bot = Bot.objects.create(owner=request.user, **validated_data)
-            bot.assets.set(assets)
+            bot.bot_assets.set(assets)
             IndicatorService.create_for_bot(bot, request.data)
-            bot.activate()
         return bot
 
 
 class RedisService:
 
-    r = redis.from_url(settings.REDIS_URL,
+    r = redis.from_url('redis://redis:6379/1',
                        decode_responses=True)
 
     @classmethod

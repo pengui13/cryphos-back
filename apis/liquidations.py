@@ -15,7 +15,7 @@ class LiquidationFetcher:
 
     async def start(self):
         self.running = True
-        self.redis = await redis.from_url(settings.REDIS_URL)
+        self.redis = await redis.from_url('redis://redis:6379/1')
 
         while self.running:
             try:

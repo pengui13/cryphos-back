@@ -6,7 +6,7 @@ from .models import (BollingerBandsIndicator, Bot,
 
 @admin.register(Bot)
 class BotAdmin(admin.ModelAdmin):
-    list_display = ('name', 'created_at', 'owner__email', 'rank')
+    list_display = ('name', 'created_at', 'owner__email',)
     search_fields = ('owner__email',)
 
 

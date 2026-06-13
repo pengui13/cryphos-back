@@ -45,6 +45,11 @@ urlpatterns = [
         views.create_billing_portal_session,
         name="create_billing_portal_session"
     ),
+    path(
+        "ping/",
+        views.Ping.as_view(),
+        name="accounts_ping"
+    ),
     path("billing/me/",
          views.billing_me,
          name="billing_me"),

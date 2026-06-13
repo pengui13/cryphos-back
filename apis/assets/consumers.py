@@ -8,7 +8,7 @@ from django.conf import settings
 class LiquidationConsumer(AsyncWebsocketConsumer):
     async def connect(self):
         await self.accept()
-        self.redis = await redis.from_url(settings.REDIS_URL)
+        self.redis = await redis.from_url('redis://redis:6379/1')
         await self._send_recent_liquidations()
         self.pubsub = self.redis.pubsub()
         await self.pubsub.subscribe("liquidations")

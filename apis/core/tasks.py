@@ -329,7 +329,7 @@ def build_close_signal_message(signal, roi: float, close_reason: str | None) -> 
 
 <code>────────────────────</code>
 🤖 {bot_name}
-🔗 <a href="{settings.CRYPHOS_URL}">{CRYPHOS_LABEL}</a>
+🔗 <a href="{settings.CRYPHOS_URL}">{settings.CRYPHOS_LABEL}</a>
 """.strip()
 
     return msg
@@ -342,7 +342,7 @@ def backup_database():
 
 def interval_to_sec(period: str) -> int:
 
-    return INTERVAL_SEC[period] + 20
+    return settings.INTERVAL_SEC[period] + 20
 
 
 def calculate_rsi_signal(asset, bot, calc) -> dict | None:
@@ -970,7 +970,7 @@ def build_telegram_message(data: dict, bot=None) -> str:
         price_str = f"${price:.4f}"
 
     bot_name = data.get("bot_name", "Trading Bot")
-    cryphos_link = f'🔗 <a href="{CRYPHOS_URL}">{CRYPHOS_LABEL}</a>'
+    cryphos_link = f'🔗 <a href="{settings.CRYPHOS_URL}">{settings.CRYPHOS_LABEL}</a>'
 
     if data.get("is_combined"):
         indicators_str = " + ".join(data["indicators"])

@@ -5,7 +5,13 @@ from loguru import logger
 import redis.asyncio as redis
 import websockets
 from django.conf import settings
+import os
+import django
 
+os.environ.setdefault("DJANGO_SETTINGS_MODULE", "apis.settings")
+django.setup()
+
+from django.conf import settings
 
 class LastPriceFetcher:
 
@@ -31,7 +37,7 @@ class LastPriceFetcher:
         await pipe.execute()
 
     async def start(self):
-        self.redis = redis.from_url(settings.REDIS_URL, decode_responses=True)
+        self.redis = redis.from_url('redis://redis:6379/1', decode_responses=True)
         await self._collect()
 
     def _build_url(self) -> str:

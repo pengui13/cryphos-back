@@ -188,6 +188,14 @@ CSRF_COOKIE_SECURE = True
 SESSION_COOKIE_SECURE = True
 
 INTERVALS = ["1m", "5m", "15m", "30m", "1h", "1d"]
+INTERVAL_SEC = {
+    "1MIN": 60,
+    "5MIN": 300,
+    "15MIN": 900,
+    "30MIN": 1800,
+    "1HRS": 3600,
+    "1DAY": 86400
+}
 REDIS_URL = "redis://redis:6379/1"
 KLINES_HASH = "prices:klines"
 LAST_HASH = "prices:last"

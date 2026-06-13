@@ -271,6 +271,12 @@ def stripe_webhook(request):
     return Response(status=status.HTTP_200_OK)
 
 
+class Ping(APIView):
+    permission_classes = [AllowAny]
+
+    def get(self, request, *args, **kwargs):
+        return Response({'detail': 'ok'})
+
 class RegisterStartView(generics.CreateAPIView):
     permission_classes = [AllowAny]
     serializer_class = RegisterStartSerializer
