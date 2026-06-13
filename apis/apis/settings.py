@@ -203,10 +203,10 @@ TS_HASH = "prices:ts"
 
 CRYPHOS_LABEL = "Cryphos"
 CRYPHOS_URL = "https://cryphos.com"
-FUNDING_URL = "https://fapi.binance.com/fapi/v1/fundingRate"
-KLINES_URL = "https://api.binance.com/api/v3/klines"
+FUNDING_URL = "https://fapi.binance.us/fapi/v1/fundingRate"
+KLINES_URL = "https://api.binance.us/api/v3/klines"
 OKX_URL = "wss://ws.okx.com:8443/ws/v5/public"
-WS_BASE = "wss://stream.binance.com:9443/stream?streams="
+WS_BASE = "wss://stream.binance.us:9443/stream?streams="
 FNG_URL = "https://api.alternative.me/fng/"
 
 SYMBOLS = [

@@ -4,7 +4,7 @@ import requests
 from assets.models import AssetCryptoCoin, HistQuotes
 from django.core.management.base import BaseCommand
 
-BINANCE_BASE_URL = "https://api.binance.com"
+BINANCE_BASE_URL = "https://api.binance.us"   # was https://api.binance.com
 
 SUPPORTED_TIMEFRAMES = {
     "1m": "1MIN",

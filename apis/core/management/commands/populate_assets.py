@@ -2,7 +2,7 @@ import requests
 from assets.models import AssetCryptoCoin
 from django.core.management.base import BaseCommand
 
-BINANCE_BASE_URL = "https://api.binance.com"
+BINANCE_BASE_URL = "https://api.binance.us"
 
 
 def get_top_symbols(limit: int = 50):
