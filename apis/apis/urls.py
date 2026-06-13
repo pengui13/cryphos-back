@@ -29,7 +29,7 @@ urlpatterns = [
     path(API_PREFIX + "bots/",
          include("bots.urls")),
     re_path(
-        r"^media/(?P<path>.*)$",
+        r"^api/media/(?P<path>.*)$",
         serve,
         {"document_root": settings.MEDIA_ROOT},
     ),

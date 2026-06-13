@@ -125,7 +125,8 @@ STATICFILES_DIRS = [
     os.path.join(BASE_DIR, "static"),
 ]
 
-MEDIA_URL = "/media/"
+# Served under /api/ so it passes through the existing /api/* reverse proxy.
+MEDIA_URL = "/api/media/"
 MEDIA_ROOT = os.path.join(BASE_DIR, "media")
 
 
