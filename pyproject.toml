@@ -19,6 +19,7 @@ dependencies = [
     "flower==2.0.1",
     "loguru>=0.7.3",
     "pandas==2.2.3",
+    "pillow>=11.0.0",
     "psycopg[binary,pool]==3.2.4",
     "python-telegram-bot==21.9",
     "redis==7.1.0",
