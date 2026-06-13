@@ -62,13 +62,14 @@ class KlinesFetcher:
                     close_timeout=5,
                     max_queue=10000,
                 ) as ws:
+                    backoff = 1.0          # reset after a successful connection
                     async for raw in ws:
                         await self._handle_message(raw)
 
             except (asyncio.CancelledError, KeyboardInterrupt):
                 raise
             except Exception as e:
-                sleep_for = self.backoff + random.random() * 0.25
+                sleep_for = backoff + random.random() * 0.25   # was self.backoff
                 logger.error(e)
                 await asyncio.sleep(sleep_for)
                 backoff = min(backoff * 2, 60.0)
