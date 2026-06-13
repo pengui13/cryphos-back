@@ -207,6 +207,7 @@ TS_HASH = "prices:ts"
 
 CRYPHOS_LABEL = "Cryphos"
 CRYPHOS_URL = "https://cryphos.com"
+TELEGRAM_SUPPORT = "@cryphos_support"
 FUNDING_URL = "https://fapi.binance.us/fapi/v1/fundingRate"
 KLINES_URL = "https://api.binance.us/api/v3/klines"
 OKX_URL = "wss://ws.okx.com:8443/ws/v5/public"

@@ -14,6 +14,11 @@ from telegram.ext import (
 from loguru import logger
 User = get_user_model()
 
+# Branding / links — single source of truth for the bot copy.
+SITE_NAME = getattr(settings, "CRYPHOS_LABEL", "Cryphos")
+SITE_URL = getattr(settings, "CRYPHOS_URL", "https://cryphos.com")
+SUPPORT = getattr(settings, "TELEGRAM_SUPPORT", "@cryphos_support")
+
 
 
 
