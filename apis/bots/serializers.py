@@ -81,7 +81,7 @@ class SignalSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = models.Signal
-        fields = ["asset", "bot", "close_price", "closed_at",
+        fields = ["id", "asset", "bot", "close_price", "closed_at",
                   "created_at", "is_long", "is_open", "open_price"]
         read_only_fields = fields
 
