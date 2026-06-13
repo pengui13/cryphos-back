@@ -9,6 +9,7 @@ class User(AbstractUser):
     tg_nickname = models.CharField(default="", null=True, blank=True)
     tg_approved = models.BooleanField(default=False)
     chat_id = models.CharField(default="", null=True, blank=True)
+    avatar = models.ImageField(upload_to="avatars/", null=True, blank=True)
 
     def __str__(self):
         return self.username

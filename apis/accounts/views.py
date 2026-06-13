@@ -494,6 +494,128 @@ def me(request):
     return Response({"ping": True})
 
 
+def profile_data(user, request):
+    """Serialize the public profile of a user."""
+    avatar_url = None
+    if user.avatar:
+        avatar_url = request.build_absolute_uri(user.avatar.url)
+    return {
+        "id": user.id,
+        "username": user.username,
+        "email": user.email,
+        "avatar": avatar_url,
+    }
+
+
+class ProfileView(APIView):
+    """GET current profile, PATCH to update username."""
+
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        return Response(profile_data(request.user, request))
+
+    def patch(self, request):
+        user = request.user
+        username = (request.data.get("username") or "").strip()
+
+        if not username:
+            return Response(
+                {"detail": "Username is required"},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        if len(username) < 3:
+            return Response(
+                {"detail": "Username must be at least 3 characters"},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        if (
+            User.objects.filter(username__iexact=username)
+            .exclude(pk=user.pk)
+            .exists()
+        ):
+            return Response(
+                {"detail": "Username is already taken"},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        user.username = username
+        user.save(update_fields=["username"])
+        return Response(profile_data(user, request))
+
+
+class ChangePasswordView(APIView):
+    """Change password while logged in (requires current password)."""
+
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request):
+        user = request.user
+        current = request.data.get("current_password", "")
+        new = request.data.get("new_password", "")
+        new2 = request.data.get("new_password2", "")
+
+        if not all([current, new]):
+            return Response(
+                {"detail": "All fields are required"},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        if not user.check_password(current):
+            return Response(
+                {"detail": "Current password is incorrect"},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        if new2 and new != new2:
+            return Response(
+                {"detail": "Passwords do not match"},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        if len(new) < 6:
+            return Response(
+                {"detail": "Password must be at least 6 characters"},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        if current == new:
+            return Response(
+                {"detail": "New password must be different"},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        user.set_password(new)
+        user.save()
+        return Response({"detail": "Password updated"})
+
+
+class AvatarUploadView(APIView):
+    """Upload / replace the user's profile photo."""
+
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request):
+        user = request.user
+        avatar = request.FILES.get("avatar")
+
+        if not avatar:
+            return Response(
+                {"detail": "No file uploaded"},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        if avatar.content_type not in ("image/jpeg", "image/png", "image/webp"):
+            return Response(
+                {"detail": "Only JPEG, PNG or WEBP images are allowed"},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        if avatar.size > 5 * 1024 * 1024:
+            return Response(
+                {"detail": "Image must be smaller than 5MB"},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        user.avatar = avatar
+        user.save(update_fields=["avatar"])
+        return Response(profile_data(user, request))
+
+
 class ResetVerifyView(APIView):
     """Verify code and set new password"""
 

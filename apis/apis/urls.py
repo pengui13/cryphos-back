@@ -1,7 +1,9 @@
 # TODO nothing
 
+from django.conf import settings
 from django.contrib import admin
-from django.urls import include, path
+from django.urls import include, path, re_path
+from django.views.static import serve
 from drf_spectacular.views import (
     SpectacularAPIView,
     SpectacularSwaggerView,
@@ -26,4 +28,9 @@ urlpatterns = [
          include("assets.urls")),
     path(API_PREFIX + "bots/",
          include("bots.urls")),
+    re_path(
+        r"^media/(?P<path>.*)$",
+        serve,
+        {"document_root": settings.MEDIA_ROOT},
+    ),
 ]

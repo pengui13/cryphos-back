@@ -66,4 +66,19 @@ urlpatterns = [
         views.GetTelegramInfo.as_view(),
         name="add_telegram",
     ),
+    path(
+        "profile/",
+        views.ProfileView.as_view(),
+        name="profile",
+    ),
+    path(
+        "profile/password/",
+        views.ChangePasswordView.as_view(),
+        name="change_password",
+    ),
+    path(
+        "profile/avatar/",
+        views.AvatarUploadView.as_view(),
+        name="upload_avatar",
+    ),
 ]
